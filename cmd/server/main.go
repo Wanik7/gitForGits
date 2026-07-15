@@ -1,6 +1,7 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 	"techstore/internal/middleware"
@@ -9,6 +10,18 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+var templateCache *template.Template
+
+func LoadTemplates() {
+	templates, err := template.ParseGlob("web/templates/*.html")
+	if err != nil {
+		log.Fatal("Error loading templates: ", err)
+	}
+
+	templateCache = templates
+	log.Println("Templates loaded successfully")
+}
 
 type App struct {
 	Router *mux.Router
@@ -31,6 +44,10 @@ func (a *App) InitializeRoutes() {
 		w.Write([]byte("TechStore API is up and running"))
 	}).Methods("GET")
 
+	publicCompRouter := a.Router.PathPrefix("/components").Subrouter()
+
+	publicCompRouter.HandleFunc("/ui", handlers.RenderHomeHandler(templateCache)).Methods("GET")
+
 	compRouter := a.Router.PathPrefix("/components").Subrouter()
 
 	compRouter.HandleFunc("", handlers.GetComponentsHandler).Methods("GET")
@@ -52,6 +69,8 @@ func CustomNotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	LoadTemplates()
+
 	app := &App{}
 	app.Initialize()
 	app.Run(":8080")

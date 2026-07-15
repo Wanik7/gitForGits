@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"strconv"
 	"techstore/pkg/models"
@@ -106,4 +107,13 @@ func DeleteComponentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Error(w, "Component not found", http.StatusNotFound)
+}
+
+func RenderHomeHandler(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := tmpl.ExecuteTemplate(w, "base", ComponentDB)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+	}
 }

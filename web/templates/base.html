@@ -1,0 +1,19 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TechStore - Магазин комплектующих</title>
+</head>
+<body>
+<!-- Вставляем шапку -->
+{{template "header" .}}
+
+<!-- Вставляем основной контент (и прокидываем в него данные через точку) -->
+{{template "mainContent" .}}
+
+<!-- Вставляем подвал -->
+{{template "footer" .}}
+</body>
+</html>
+{{end}}

@@ -1,0 +1,21 @@
+{{define "mainContent"}}
+<main style="padding: 20px;">
+    <h2>Наш каталог</h2>
+    <div style="display: flex; gap: 20px;">
+        <!-- Запускаем цикл по переданному списку компонентов -->
+        {{range .}}
+        <div style="border: 1px solid #000; padding: 15px; border-radius: 5px;">
+            <h3>{{.Name}}</h3>
+            <p><strong>Производитель:</strong> {{.Manufacturer}}</p>
+            <p><strong>Категория:</strong> {{.Category}}</p>
+            <p><strong>Цена:</strong> ${{.Price}}</p>
+
+            <!-- Условие: если цена больше 200, выводим специальный бейдж -->
+            {{if gt .Price 200.0}}
+            <p style="color: red; font-weight: bold;">🔥 Премиум сегмент!</p>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+</main>
+{{end}}
