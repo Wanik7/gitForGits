@@ -29,33 +29,53 @@ type App struct {
 
 func (a *App) Initialize() {
 	a.Router = mux.NewRouter()
+	// custom 404 error
+	a.Router.NotFoundHandler = http.HandlerFunc(CustomNotFoundHandler)
 
+	// === global middleware that using through the whole app
+
+	// custom 500 error
+	a.Router.Use(middleware.InternalServerErrorHandler)
+
+	// rate and limit inhibit middleware
+	a.Router.Use(middleware.RateLimit)
+	a.Router.Use(middleware.RequestThrottle)
+
+	a.initializeRoutes()
+}
+
+func (a *App) initializeRoutes() {
+	// Глобальные middleware для всего приложения (500 ошибки, лимиты, троттлинг)
 	a.Router.Use(middleware.InternalServerErrorHandler)
 	a.Router.Use(middleware.RateLimit)
 	a.Router.Use(middleware.RequestThrottle)
 
+	// Кастомная 404 ошибка
 	a.Router.NotFoundHandler = http.HandlerFunc(CustomNotFoundHandler)
-	a.InitializeRoutes()
-}
 
-func (a *App) InitializeRoutes() {
-	a.Router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("TechStore API is up and running"))
-	}).Methods("GET")
+	// ==========================================
+	// 1. ПОЛЬЗОВАТЕЛЬСКИЙ ИНТЕРФЕЙС (HTML UI)
+	// ==========================================
+	// Главная страница нашего магазина (витрина)
+	a.Router.HandleFunc("/", handlers.RenderHomeHandler(templateCache)).Methods("GET")
 
-	publicCompRouter := a.Router.PathPrefix("/components").Subrouter()
+	// Обработка отправки формы добавления товара
+	a.Router.HandleFunc("/admin/components/add", handlers.CreateComponentFormHandler).Methods("POST")
 
-	publicCompRouter.HandleFunc("/ui", handlers.RenderHomeHandler(templateCache)).Methods("GET")
+	// ==========================================
+	// 2. ИНТЕРФЕЙС РАЗРАБОТЧИКА (JSON API)
+	// ==========================================
+	// Создаем отдельный саб-роутер для API с префиксом /api
+	apiRouter := a.Router.PathPrefix("/api").Subrouter()
 
-	compRouter := a.Router.PathPrefix("/components").Subrouter()
+	// Публичные API-маршруты (доступны всем без токенов)
+	apiRouter.HandleFunc("/components", handlers.GetComponentsHandler).Methods("GET")
+	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.GetComponentByIDHandler).Methods("GET")
 
-	compRouter.HandleFunc("", handlers.GetComponentsHandler).Methods("GET")
-	compRouter.HandleFunc("/{id:[0-9]+}", handlers.GetComponentByIDHandler).Methods("GET")
-
-	compRouter.HandleFunc("", handlers.CreateComponentHandler).Methods("POST")
-	compRouter.HandleFunc("/{id:[0-9]+}", handlers.UpdateComponentHandler).Methods("PUT")
-	compRouter.HandleFunc("/{id:[0-9]+}", handlers.DeleteComponentHandler).Methods("DELETE")
+	// Админские API-маршруты (здесь в будущем будет проверяться авторизация)
+	apiRouter.HandleFunc("/components", handlers.CreateComponentHandler).Methods("POST")
+	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.UpdateComponentHandler).Methods("PUT")
+	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.DeleteComponentHandler).Methods("DELETE")
 }
 
 func (a *App) Run(addr string) {
