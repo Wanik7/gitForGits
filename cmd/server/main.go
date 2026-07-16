@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type App struct {
@@ -63,22 +64,22 @@ func (a *App) initializeRoutes() {
 	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(middleware.AdminAuthMiddleware)
 
-	adminRouter.HandleFunc("/components/add", handlers.CreateComponentFormHandler).Methods("POST")
+	adminRouter.HandleFunc("/components/add", compHandler.CreateComponentFormHandler).Methods("POST")
 
 	// ==========================================
 	// 2. ИНТЕРФЕЙС РАЗРАБОТЧИКА (JSON API)
 	// ==========================================
 	apiRouter := a.Router.PathPrefix("/api").Subrouter()
 
-	apiRouter.HandleFunc("/components", handlers.GetComponentsHandler).Methods("GET")
-	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.GetComponentByIDHandler).Methods("GET")
+	apiRouter.HandleFunc("/components", compHandler.GetComponentsHandler).Methods("GET")
+	apiRouter.HandleFunc("/components/{id:[0-9]+}", compHandler.GetComponentByIDHandler).Methods("GET")
 
 	adminApiRouter := apiRouter.PathPrefix("/components").Subrouter()
 	adminApiRouter.Use(middleware.AdminAuthMiddleware)
 
-	adminApiRouter.HandleFunc("", handlers.CreateComponentHandler).Methods("POST")
-	adminApiRouter.HandleFunc("/{id:[0-9]+}", handlers.UpdateComponentHandler).Methods("PUT")
-	adminApiRouter.HandleFunc("/{id:[0-9]+}", handlers.DeleteComponentHandler).Methods("DELETE")
+	adminApiRouter.HandleFunc("", compHandler.CreateComponentHandler).Methods("POST")
+	adminApiRouter.HandleFunc("/{id:[0-9]+}", compHandler.UpdateComponentHandler).Methods("PUT")
+	adminApiRouter.HandleFunc("/{id:[0-9]+}", compHandler.DeleteComponentHandler).Methods("DELETE")
 }
 
 func (a *App) createTables() {

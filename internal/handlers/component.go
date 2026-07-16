@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"html/template"
 	"net/http"
@@ -10,42 +11,40 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var componentDB = []models.Component{
-	{ID: 1, Name: "Ryzen 5 5600", Manufacturer: "AMD", Category: "CPU", Price: 135.50},
-	{ID: 2, Name: "GeForce RTX 4060", Manufacturer: "NVIDIA", Category: "GPU", Price: 299.99},
+type ComponentHandler struct {
+	DB   *sql.DB
+	Tmpl *template.Template
 }
 
-func GetComponentsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	json.NewEncoder(w).Encode(componentDB)
-}
-
-func GetComponentByIDHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	idStr := vars["id"]
-
-	id, err := strconv.Atoi(idStr)
+func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Request) {
+	rows, err := ch.DB.Query("SELECT id, name, manufacturer, category, price FROM components ORDER BY id DESC")
 	if err != nil {
-		http.Error(w, "Invalid component ID", http.StatusBadRequest)
+		http.Error(w, "Error fetching data", http.StatusInternalServerError)
+		return
 	}
+	defer rows.Close()
 
-	for _, component := range componentDB {
-		if component.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(component)
+	var components []models.Component
+
+	for rows.Next() {
+		var comp models.Component
+		if err := rows.Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price); err != nil {
+			http.Error(w, "Error reading data", http.StatusInternalServerError)
 			return
 		}
+		components = append(components, comp)
 	}
 
-	http.Error(w, "Component not found", http.StatusNotFound)
+	err = ch.Tmpl.ExecuteTemplate(w, "base", components)
+	if err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		return
+	}
 }
 
-func CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -54,8 +53,8 @@ func CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
 	category := r.FormValue("category")
 	priceStr := r.FormValue("price")
 
-	if len(name) < 3 || manufacturer == "" || priceStr == "" {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+	if len(name) < 3 || manufacturer == "" || category == "" || priceStr == "" {
+		http.Error(w, "Missing mandatory fields", http.StatusBadRequest)
 		return
 	}
 
@@ -65,89 +64,137 @@ func CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newComp := models.Component{
-		ID:           len(componentDB) + 1,
-		Name:         name,
-		Manufacturer: manufacturer,
-		Category:     category,
-		Price:        price,
+	query := `INSERT INTO components (name, manufacturer, category, price)
+			VALUES ($1, $2, $3, $4)`
+	_, err = ch.DB.Exec(query, name, manufacturer, category, price)
+	if err != nil {
+		http.Error(w, "Error creating component", http.StatusInternalServerError)
+		return
 	}
-	componentDB = append(componentDB, newComp)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func CreateComponentHandler(w http.ResponseWriter, r *http.Request) {
-	var newComponent models.Component
+// =========================================================================
+// 2. ИНТЕРФЕЙС РАЗРАБОТЧИКА (JSON API)
+// =========================================================================
 
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&newComponent); err != nil {
-		http.Error(w, "Invalid component data", http.StatusBadRequest)
+func (ch *ComponentHandler) GetComponentsHandler(w http.ResponseWriter, r *http.Request) {
+	rows, err := ch.DB.Query("SELECT id, name, manufacturer, category, price FROM components ORDER BY id")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var components []models.Component = make([]models.Component, 0)
+	for rows.Next() {
+		var comp models.Component
+		if err := rows.Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		components = append(components, comp)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(components)
+}
+
+func (ch *ComponentHandler) GetComponentByIDHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid component ID", http.StatusBadRequest)
 		return
 	}
 
-	newComponent.ID = len(componentDB) + 1
-	componentDB = append(componentDB, newComponent)
+	var comp models.Component
+	query := "SELECT id, name, manufacturer, category, price FROM components WHERE id = $1"
+
+	err = ch.DB.QueryRow(query, id).Scan(&comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Component not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(comp)
+}
+
+func (ch *ComponentHandler) CreateComponentHandler(w http.ResponseWriter, r *http.Request) {
+	var comp models.Component
+	if err := json.NewDecoder(r.Body).Decode(&comp); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	query := `INSERT INTO components (name, manufacturer, category, price)
+			VALUES ($1, $2, $3, $4) RETURNING id`
+
+	err := ch.DB.QueryRow(query, comp.Name, comp.Manufacturer, comp.Category, comp.Price).Scan(&comp.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newComponent)
+	json.NewEncoder(w).Encode(comp)
 }
 
-func UpdateComponentHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+func (ch *ComponentHandler) UpdateComponentHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
 	if err != nil {
 		http.Error(w, "Invalid component ID", http.StatusBadRequest)
 		return
 	}
 
-	var updatedComponent models.Component
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&updatedComponent); err != nil {
-		http.Error(w, "Invalid component data", http.StatusBadRequest)
+	var comp models.Component
+	if err := json.NewDecoder(r.Body).Decode(&comp); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	for i, comp := range componentDB {
-		if comp.ID == id {
-			updatedComponent.ID = id
-			componentDB[i] = updatedComponent
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(updatedComponent)
-			return
-		}
+	query := `UPDATE components SET name = $1, manufacturer = $2, category = $3, price = $4 WHERE id = $5`
+	result, err := ch.DB.Exec(query, comp.Name, comp.Manufacturer, comp.Category, comp.Price, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	http.Error(w, "Component not found", http.StatusNotFound)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		http.Error(w, "Component not found", http.StatusInternalServerError)
+		return
+	}
+
+	comp.ID = id
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(comp)
 }
 
-func DeleteComponentHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+func (ch *ComponentHandler) DeleteComponentHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
 	if err != nil {
 		http.Error(w, "Invalid component ID", http.StatusBadRequest)
 	}
 
-	for i, comp := range componentDB {
-		if comp.ID == id {
-			componentDB = append(componentDB[:i], componentDB[i+1:]...)
-
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	query := `DELETE FROM components WHERE id = $1`
+	result, err := ch.DB.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	http.Error(w, "Component not found", http.StatusNotFound)
-}
 
-func RenderHomeHandler(tmpl *template.Template) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := tmpl.ExecuteTemplate(w, "base", componentDB)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		http.Error(w, "Component not found", http.StatusInternalServerError)
+		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
