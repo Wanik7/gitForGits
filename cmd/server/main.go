@@ -1,46 +1,47 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"techstore/internal/middleware"
 
 	"techstore/internal/handlers"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
-var templateCache *template.Template
+type App struct {
+	Router        *mux.Router
+	DB            *sql.DB
+	TemplateCache *template.Template
+}
 
-func LoadTemplates() {
-	templates, err := template.ParseGlob("web/templates/*.html")
+func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		dbUser, dbPassword, dbHost, dbPort, dbName)
+
+	var err error
+	a.DB, err = sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Error loading templates: ", err)
+		log.Fatal(err)
 	}
 
-	templateCache = templates
-	log.Println("Templates loaded successfully")
-}
+	err = a.DB.Ping()
+	if err != nil {
+		log.Fatal("DB Connection failed: ", err)
+	}
+	log.Println("Successful connected to PostgreSQL!")
 
-type App struct {
-	Router *mux.Router
-}
+	a.createTables()
 
-func (a *App) Initialize() {
+	a.LoadTemplates()
+
 	a.Router = mux.NewRouter()
-	// custom 404 error
-	a.Router.NotFoundHandler = http.HandlerFunc(CustomNotFoundHandler)
-
-	// === global middleware that using through the whole app
-
-	// custom 500 error
-	a.Router.Use(middleware.InternalServerErrorHandler)
-
-	// rate and limit inhibit middleware
-	a.Router.Use(middleware.RateLimit)
-	a.Router.Use(middleware.RequestThrottle)
-
 	a.initializeRoutes()
 }
 
@@ -53,17 +54,15 @@ func (a *App) initializeRoutes() {
 	// Кастомная 404 ошибка
 	a.Router.NotFoundHandler = http.HandlerFunc(CustomNotFoundHandler)
 
+	compHandler := &handlers.ComponentHandler{DB: a.DB, Tmpl: a.TemplateCache}
+
 	// ==========================================
 	// 1. ПОЛЬЗОВАТЕЛЬСКИЙ ИНТЕРФЕЙС (HTML UI)
 	// ==========================================
-	// Публичная главная страница
-	a.Router.HandleFunc("/", handlers.RenderHomeHandler(templateCache)).Methods("GET")
 
-	// Создаем изолированный саб-роутер для Админки
 	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
-	adminRouter.Use(middleware.AdminAuthMiddleware) // Защищаем ВСЕ маршруты внутри /admin
+	adminRouter.Use(middleware.AdminAuthMiddleware)
 
-	// Обработка формы добавления товара (теперь путь относительно префикса "/admin")
 	adminRouter.HandleFunc("/components/add", handlers.CreateComponentFormHandler).Methods("POST")
 
 	// ==========================================
@@ -71,17 +70,39 @@ func (a *App) initializeRoutes() {
 	// ==========================================
 	apiRouter := a.Router.PathPrefix("/api").Subrouter()
 
-	// А. Публичные API-маршруты
 	apiRouter.HandleFunc("/components", handlers.GetComponentsHandler).Methods("GET")
 	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.GetComponentByIDHandler).Methods("GET")
 
-	// Б. Админские API-маршруты
 	adminApiRouter := apiRouter.PathPrefix("/components").Subrouter()
 	adminApiRouter.Use(middleware.AdminAuthMiddleware)
 
 	adminApiRouter.HandleFunc("", handlers.CreateComponentHandler).Methods("POST")
 	adminApiRouter.HandleFunc("/{id:[0-9]+}", handlers.UpdateComponentHandler).Methods("PUT")
 	adminApiRouter.HandleFunc("/{id:[0-9]+}", handlers.DeleteComponentHandler).Methods("DELETE")
+}
+
+func (a *App) createTables() {
+	query := `
+	CREATE TABLE IF NOT EXISTS components (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(100) NOT NULL,
+		manufacturer VARCHAR(100) NOT NULL,
+		category VARCHAR(50) NOT NULL,
+		price NUMERIC(10, 2) NOT NULL
+	);`
+
+	_, err := a.DB.Exec(query)
+	if err != nil {
+		log.Fatal("Ошибка создания таблицы: ", err)
+	}
+}
+
+func (a *App) LoadTemplates() {
+	templates, err := template.ParseGlob("web/templates/*.html")
+	if err != nil {
+		log.Fatal("Ошибка загрузки шаблонов: ", err)
+	}
+	a.TemplateCache = templates
 }
 
 func (a *App) Run(addr string) {
@@ -95,9 +116,21 @@ func CustomNotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	LoadTemplates()
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env not found, using system defaults.")
+	}
+
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	if dbHost == "" || dbUser == "" || dbPass == "" || dbName == "" {
+		log.Fatal("Fatal error: System defaults not found in environment variables.")
+	}
 
 	app := &App{}
-	app.Initialize()
+	app.Initialize(dbHost, dbPort, dbUser, dbPass, dbName)
 	app.Run(":8080")
 }
