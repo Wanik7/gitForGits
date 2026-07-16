@@ -45,7 +45,7 @@ func (a *App) Initialize() {
 }
 
 func (a *App) initializeRoutes() {
-	// Глобальные middleware для всего приложения (500 ошибки, лимиты, троттлинг)
+	// Глобальные middleware
 	a.Router.Use(middleware.InternalServerErrorHandler)
 	a.Router.Use(middleware.RateLimit)
 	a.Router.Use(middleware.RequestThrottle)
@@ -56,26 +56,32 @@ func (a *App) initializeRoutes() {
 	// ==========================================
 	// 1. ПОЛЬЗОВАТЕЛЬСКИЙ ИНТЕРФЕЙС (HTML UI)
 	// ==========================================
-	// Главная страница нашего магазина (витрина)
+	// Публичная главная страница
 	a.Router.HandleFunc("/", handlers.RenderHomeHandler(templateCache)).Methods("GET")
 
-	// Обработка отправки формы добавления товара
-	a.Router.HandleFunc("/admin/components/add", handlers.CreateComponentFormHandler).Methods("POST")
+	// Создаем изолированный саб-роутер для Админки
+	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(middleware.AdminAuthMiddleware) // Защищаем ВСЕ маршруты внутри /admin
+
+	// Обработка формы добавления товара (теперь путь относительно префикса "/admin")
+	adminRouter.HandleFunc("/components/add", handlers.CreateComponentFormHandler).Methods("POST")
 
 	// ==========================================
 	// 2. ИНТЕРФЕЙС РАЗРАБОТЧИКА (JSON API)
 	// ==========================================
-	// Создаем отдельный саб-роутер для API с префиксом /api
 	apiRouter := a.Router.PathPrefix("/api").Subrouter()
 
-	// Публичные API-маршруты (доступны всем без токенов)
+	// А. Публичные API-маршруты
 	apiRouter.HandleFunc("/components", handlers.GetComponentsHandler).Methods("GET")
 	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.GetComponentByIDHandler).Methods("GET")
 
-	// Админские API-маршруты (здесь в будущем будет проверяться авторизация)
-	apiRouter.HandleFunc("/components", handlers.CreateComponentHandler).Methods("POST")
-	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.UpdateComponentHandler).Methods("PUT")
-	apiRouter.HandleFunc("/components/{id:[0-9]+}", handlers.DeleteComponentHandler).Methods("DELETE")
+	// Б. Админские API-маршруты
+	adminApiRouter := apiRouter.PathPrefix("/components").Subrouter()
+	adminApiRouter.Use(middleware.AdminAuthMiddleware)
+
+	adminApiRouter.HandleFunc("", handlers.CreateComponentHandler).Methods("POST")
+	adminApiRouter.HandleFunc("/{id:[0-9]+}", handlers.UpdateComponentHandler).Methods("PUT")
+	adminApiRouter.HandleFunc("/{id:[0-9]+}", handlers.DeleteComponentHandler).Methods("DELETE")
 }
 
 func (a *App) Run(addr string) {
