@@ -7,9 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"techstore/internal/middleware"
-
 	"techstore/internal/handlers"
+	"techstore/internal/middleware"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -47,19 +46,25 @@ func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
 }
 
 func (a *App) initializeRoutes() {
-	// Глобальные middleware
+	// Global middleware
 	a.Router.Use(middleware.InternalServerErrorHandler)
 	a.Router.Use(middleware.RateLimit)
 	a.Router.Use(middleware.RequestThrottle)
 
-	// Кастомная 404 ошибка
+	// Custom 404 error
 	a.Router.NotFoundHandler = http.HandlerFunc(CustomNotFoundHandler)
 
-	compHandler := &handlers.ComponentHandler{DB: a.DB, Tmpl: a.TemplateCache}
+	// ==========================================
+	// 1. USER INTERFACE (HTML UI)
+	// ==========================================
 
-	// ==========================================
-	// 1. ПОЛЬЗОВАТЕЛЬСКИЙ ИНТЕРФЕЙС (HTML UI)
-	// ==========================================
+	compHandler := &handlers.ComponentHandler{DB: a.DB, Tmpl: a.TemplateCache}
+	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
+
+	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache}
+
+	a.Router.HandleFunc("/register", userHandler.RenderRegisterForm).Methods("GET")
+	a.Router.HandleFunc("/register", userHandler.RegisterUser).Methods("POST")
 
 	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(middleware.AdminAuthMiddleware)
@@ -67,7 +72,7 @@ func (a *App) initializeRoutes() {
 	adminRouter.HandleFunc("/components/add", compHandler.CreateComponentFormHandler).Methods("POST")
 
 	// ==========================================
-	// 2. ИНТЕРФЕЙС РАЗРАБОТЧИКА (JSON API)
+	// 2. DEV INTERFACE (JSON API)
 	// ==========================================
 	apiRouter := a.Router.PathPrefix("/api").Subrouter()
 
@@ -84,24 +89,60 @@ func (a *App) initializeRoutes() {
 
 func (a *App) createTables() {
 	query := `
+	--- USERS TABLE ---
+	CREATE TABLE IF NOT EXISTS users (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL UNIQUE,
+		password_hash VARCHAR(255) NOT NULL,
+		role VARCHAR(50) NOT NULL DEFAULT 'customer',
+		created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	
+	--- COMPONENTS TABLE ---
 	CREATE TABLE IF NOT EXISTS components (
 		id SERIAL PRIMARY KEY,
-		name VARCHAR(100) NOT NULL,
+		name VARCHAR(255) NOT NULL,
 		manufacturer VARCHAR(100) NOT NULL,
 		category VARCHAR(50) NOT NULL,
-		price NUMERIC(10, 2) NOT NULL
-	);`
+		price NUMERIC(10, 2) NOT NULL,
+	    description TEXT,
+	    rating NUMERIC(3, 2) NOT NULL CHECK ( rating >= 1 AND rating <= 5 ),
+	    stock INTEGER DEFAULT 0
+	);
+
+	--- REVIEWS TABLE ---
+	CREATE TABLE IF NOT EXISTS reviews (
+	    id SERIAL PRIMARY KEY,
+	    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	    component_id INTEGER NOT NULL REFERENCES components(id) ON DELETE CASCADE,
+	    rating INTEGER NOT NULL,
+	    body TEXT,
+	    likes INTEGER NOT NULL DEFAULT 0,
+	    created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	--- COMMENTS TABLE ---
+	CREATE TABLE IF NOT EXISTS comments (
+	    id SERIAL PRIMARY KEY,
+	    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	    component_id INTEGER NOT NULL REFERENCES components(id) ON DELETE CASCADE,
+	    parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+	    body TEXT NOT NULL,
+	    created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	`
 
 	_, err := a.DB.Exec(query)
 	if err != nil {
-		log.Fatal("Ошибка создания таблицы: ", err)
+		log.Fatal("Table creation failed: ", err)
 	}
 }
 
 func (a *App) LoadTemplates() {
 	templates, err := template.ParseGlob("web/templates/*.html")
 	if err != nil {
-		log.Fatal("Ошибка загрузки шаблонов: ", err)
+		log.Fatal("Template load failed: ", err)
 	}
 	a.TemplateCache = templates
 }
