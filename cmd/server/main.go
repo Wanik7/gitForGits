@@ -60,7 +60,11 @@ func (a *App) initializeRoutes() {
 	// 1. USER INTERFACE (HTML UI)
 	// ==========================================
 
-	compHandler := &handlers.ComponentHandler{DB: a.DB, Tmpl: a.TemplateCache}
+	compHandler := &handlers.ComponentHandler{
+		DB:    a.DB,
+		Tmpl:  a.TemplateCache,
+		Store: a.Store,
+	}
 	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
 
 	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}

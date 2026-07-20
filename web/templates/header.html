@@ -1,10 +1,20 @@
 {{define "header"}}
-<header style="background: #333; color: white; padding: 10px;">
-    <h1>TechStore</h1>
-    <nav>
-        <a href="/" style="color: white; margin-right: 15px;">Главная витрина</a>
-        <!-- Ссылка теперь ведет на новый красивый JSON API -->
-        <a href="/api/components" style="color: white;">API Каталог (JSON)</a>
-    </nav>
+<header>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2><a href="/">TechStore</a></h2>
+
+        <nav>
+            <!-- Если в структуре PageData есть User -->
+            {{if .User}}
+            <span style="margin-right: 15px;">Привет, <strong>{{.User.Username}}</strong>!</span>
+            <a href="/logout">Выйти</a>
+            {{else}}
+            <!-- Если User равен nil (гость) -->
+            <a href="/login" style="margin-right: 10px;">Войти</a>
+            <a href="/register">Регистрация</a>
+            {{end}}
+        </nav>
+    </div>
+    <hr>
 </header>
 {{end}}

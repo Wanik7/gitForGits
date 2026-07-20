@@ -9,11 +9,18 @@ import (
 	"techstore/pkg/models"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 type ComponentHandler struct {
-	DB   *sql.DB
-	Tmpl *template.Template
+	DB    *sql.DB
+	Tmpl  *template.Template
+	Store *sessions.FilesystemStore
+}
+
+type PageData struct {
+	User       *models.User
+	Components []models.Component
 }
 
 func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +32,6 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 	defer rows.Close()
 
 	var components []models.Component
-
 	for rows.Next() {
 		var comp models.Component
 		if err := rows.Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock); err != nil {
@@ -35,7 +41,20 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 		components = append(components, comp)
 	}
 
-	err = ch.Tmpl.ExecuteTemplate(w, "base", components)
+	data := PageData{
+		Components: components,
+	}
+
+	session, err := ch.Store.Get(r, "techstore-session")
+	if UserID, ok := session.Values["user_id"].(int); ok && UserID != 0 {
+		var localUser models.User
+		err := ch.DB.QueryRow("SELECT name, email FROM users WHERE id = $1", UserID).Scan(&localUser.Username, &localUser.Email)
+		if err == nil {
+			data.User = &localUser
+		}
+	}
+
+	err = ch.Tmpl.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		return
