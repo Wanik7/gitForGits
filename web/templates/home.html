@@ -30,6 +30,14 @@
             <p><strong>Производитель:</strong> {{.Manufacturer}}</p>
             <p><strong>Категория:</strong> {{.Category}}</p>
             <p><strong>Цена:</strong> ${{.Price}}</p>
+            <p><strong>Рейтинг:</strong> {{.Rating}}⭐</p>
+            {{if gt .Stock 10}}
+                <p>Осталось много</p>
+            {{else if gt .Stock 0}}
+                <p style="color: red; font-weight: bold;">Осталось мало: {{.Stock}} шт.</p>
+            {{else}}
+                <p style="color: #a0a0a0; opacity: 0.5;">Нет в наличии</p>
+            {{end}}
 
             <!-- Условие: если цена больше 200, выводим специальный бейдж -->
             {{if gt .Price 200.0}}
