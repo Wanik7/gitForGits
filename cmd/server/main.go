@@ -75,6 +75,9 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/login", userHandler.RenderLoginForm).Methods("GET")
 	a.Router.HandleFunc("/login", userHandler.LoginUser).Methods("POST")
 
+	a.Router.HandleFunc("/logout", userHandler.LogoutUser).Methods("GET") /* using GET instead of POST
+    because I'm using simple a tag in html that supports only GET method */
+	
 	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(middleware.AdminAuthMiddleware)
 

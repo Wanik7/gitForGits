@@ -108,3 +108,19 @@ func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+func (uh *UserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
+	session, _ := uh.Store.Get(r, "techstore-session")
+
+	delete(session.Values, "user_id")
+
+	session.Options.MaxAge = -1
+
+	err := session.Save(r, w)
+	if err != nil {
+		http.Error(w, "Error finishing session", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
