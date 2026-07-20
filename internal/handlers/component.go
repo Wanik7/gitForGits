@@ -17,7 +17,7 @@ type ComponentHandler struct {
 }
 
 func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := ch.DB.Query("SELECT id, name, manufacturer, category, price, rating, stock, description FROM components ORDER BY id DESC")
+	rows, err := ch.DB.Query("SELECT id, name, manufacturer, category, price, rating, stock FROM components ORDER BY id DESC")
 	if err != nil {
 		http.Error(w, "Error fetching data", http.StatusInternalServerError)
 		return
@@ -28,7 +28,7 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 
 	for rows.Next() {
 		var comp models.Component
-		if err := rows.Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock, &comp.Description); err != nil {
+		if err := rows.Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock); err != nil {
 			http.Error(w, "Error reading data", http.StatusInternalServerError)
 			return
 		}

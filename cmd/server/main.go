@@ -11,6 +11,7 @@ import (
 	"techstore/internal/middleware"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -19,6 +20,7 @@ type App struct {
 	Router        *mux.Router
 	DB            *sql.DB
 	TemplateCache *template.Template
+	Store         *sessions.FilesystemStore
 }
 
 func (a *App) Initialize(dbHost, dbPort, dbUser, dbPassword, dbName string) {
@@ -61,10 +63,13 @@ func (a *App) initializeRoutes() {
 	compHandler := &handlers.ComponentHandler{DB: a.DB, Tmpl: a.TemplateCache}
 	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
 
-	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache}
+	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
 
 	a.Router.HandleFunc("/register", userHandler.RenderRegisterForm).Methods("GET")
 	a.Router.HandleFunc("/register", userHandler.RegisterUser).Methods("POST")
+
+	a.Router.HandleFunc("/login", userHandler.RenderLoginForm).Methods("GET")
+	a.Router.HandleFunc("/login", userHandler.LoginUser).Methods("POST")
 
 	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(middleware.AdminAuthMiddleware)
@@ -172,7 +177,17 @@ func main() {
 		log.Fatal("Fatal error: System defaults not found in environment variables.")
 	}
 
-	app := &App{}
+	sessionKey := os.Getenv("SESSION_KEY")
+	if sessionKey == "" {
+		log.Fatal("Fatal error: Session key not found in environment variables.")
+	}
+
+	store := sessions.NewFilesystemStore("", []byte(sessionKey))
+
+	app := &App{
+		Store: store,
+	}
+
 	app.Initialize(dbHost, dbPort, dbUser, dbPass, dbName)
 	app.Run(":8080")
 }
