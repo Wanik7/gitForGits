@@ -65,6 +65,7 @@ func (a *App) initializeRoutes() {
 		Store: a.Store,
 	}
 	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
+	a.Router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
 

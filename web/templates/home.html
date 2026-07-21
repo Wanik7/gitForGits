@@ -1,27 +1,116 @@
 {{define "mainContent"}}
-<main style="padding: 20px;">
-    <h2>Наш каталог</h2>
-    <div style="display: flex; gap: 20px;">
-        <!-- Запускаем цикл по переданному списку компонентов -->
+<style>
+    .catalog-container {
+        padding: 40px 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        font-family: sans-serif;
+    }
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 30px;
+        margin-top: 20px;
+    }
+    .product-card {
+        border: 1px solid #eaeaea;
+        border-radius: 12px;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+    }
+    .product-image {
+        width: 100%;
+        height: 200px;
+        object-fit: contain;
+        margin-bottom: 20px;
+        border-radius: 8px;
+    }
+    .product-category {
+        font-size: 0.85em;
+        text-transform: uppercase;
+        color: #888;
+        letter-spacing: 1px;
+    }
+    .product-name {
+        font-size: 1.2em;
+        margin: 10px 0;
+        color: #333;
+    }
+    .product-price {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 15px;
+    }
+    .premium-badge {
+        background: #ff4757;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    .stock-status {
+        font-size: 0.9em;
+        margin-bottom: 15px;
+        flex-grow: 1; /* Прижимает кнопку вниз */
+    }
+    .btn-details {
+        display: block;
+        text-align: center;
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+        padding: 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        transition: background 0.2s;
+    }
+    .btn-details:hover {
+        background: #0056b3;
+    }
+</style>
+
+<main class="catalog-container">
+    <h2>Catalog</h2>
+
+    <div class="product-grid">
         {{range .Components}}
-        <div style="border: 1px solid #000; padding: 15px; border-radius: 5px;">
-            <h3>{{.Name}}</h3>
-            <p><strong>Производитель:</strong> {{.Manufacturer}}</p>
-            <p><strong>Категория:</strong> {{.Category}}</p>
-            <p><strong>Цена:</strong> ${{.Price}}</p>
-            <p><strong>Рейтинг:</strong> {{.Rating}}⭐</p>
-            {{if gt .Stock 10}}
-                <p>Осталось много</p>
-            {{else if gt .Stock 0}}
-                <p style="color: red; font-weight: bold;">Осталось мало: {{.Stock}} шт.</p>
-            {{else}}
-                <p style="color: #a0a0a0; opacity: 0.5;">Нет в наличии</p>
+        <div class="product-card">
+            <img src="{{.ImagePath}}" alt="{{.Name}}" class="product-image">
+
+            <div class="product-category">{{.Category}} | {{.Manufacturer}}</div>
+            <h3 class="product-name">{{.Name}}</h3>
+
+            {{if gt .Price 500.0}}
+            <span class="premium-badge">🔥 Premium!</span>
             {{end}}
 
-            <!-- Условие: если цена больше 200, выводим специальный бейдж -->
-            {{if gt .Price 200.0}}
-            <p style="color: red; font-weight: bold;">🔥 Премиум сегмент!</p>
-            {{end}}
+            <div class="product-price">${{.Price}}</div>
+            <div style="font-size: 0.9em; color: #f39c12; margin-bottom: 10px;">Оценка: {{.Rating}} ⭐</div>
+
+            <div class="stock-status">
+                {{if gt .Stock 10}}
+                <span style="color: #2ecc71;">В наличии (много)</span>
+                {{else if gt .Stock 0}}
+                <span style="color: #e74c3c; font-weight: bold;">Осталось мало: {{.Stock}} шт.</span>
+                {{else}}
+                <span style="color: #a0a0a0;">Нет в наличии</span>
+                {{end}}
+            </div>
+
+            <!-- Ссылка на будущую детальную страницу -->
+            <a href="/component/{{.ID}}" class="btn-details">More</a>
         </div>
         {{end}}
     </div>
