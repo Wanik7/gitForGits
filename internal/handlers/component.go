@@ -217,3 +217,10 @@ func (ch *ComponentHandler) DeleteComponentHandler(w http.ResponseWriter, r *htt
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (ch *ComponentHandler) RenderAdminHandler(w http.ResponseWriter, r *http.Request) {
+	err := ch.Tmpl.ExecuteTemplate(w, "admin.html", nil)
+	if err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	}
+}

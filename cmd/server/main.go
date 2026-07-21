@@ -76,15 +76,20 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/login", userHandler.LoginUser).Methods("POST")
 
 	a.Router.HandleFunc("/logout", userHandler.LogoutUser).Methods("GET") /* using GET instead of POST
-    because I'm using simple a tag in html that supports only GET method */
-	
-	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
-	adminRouter.Use(middleware.AdminAuthMiddleware)
-
-	adminRouter.HandleFunc("/components/add", compHandler.CreateComponentFormHandler).Methods("POST")
+	   because I'm using simple a tag in html that supports only GET method */
 
 	// ==========================================
-	// 2. DEV INTERFACE (JSON API)
+	// 2.1 DEV INTERFACE (ADMIN)
+	// ==========================================
+
+	adminRouter := a.Router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(middleware.RequireAdminMiddleware(a.Store))
+
+	adminRouter.HandleFunc("/component", compHandler.RenderAdminHandler).Methods("GET")
+	adminRouter.HandleFunc("/component", compHandler.CreateComponentHandler).Methods("POST")
+
+	// ==========================================
+	// 2.2 DEV INTERFACE (JSON API)
 	// ==========================================
 	apiRouter := a.Router.PathPrefix("/api").Subrouter()
 

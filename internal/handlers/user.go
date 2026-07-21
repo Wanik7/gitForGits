@@ -79,11 +79,12 @@ func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 
 	var localUser struct {
-		ID           int
-		PasswordHash string
+		id           int
+		passwordHash string
+		role         string
 	}
 
-	err = uh.DB.QueryRow("SELECT id, password_hash FROM users WHERE email = $1", email).Scan(&localUser.ID, &localUser.PasswordHash)
+	err = uh.DB.QueryRow("SELECT id, password_hash, role FROM users WHERE email = $1", email).Scan(&localUser.id, &localUser.passwordHash, &localUser.role)
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusUnauthorized)
 		return
@@ -92,14 +93,15 @@ func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(localUser.PasswordHash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(localUser.passwordHash), []byte(password))
 	if err != nil {
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
 	session, _ := uh.Store.Get(r, "techstore-session")
-	session.Values["user_id"] = localUser.ID
+	session.Values["user_id"] = localUser.id
+	session.Values["role"] = localUser.role
 
 	if err := session.Save(r, w); err != nil {
 		http.Error(w, "Error serving session", http.StatusInternalServerError)
