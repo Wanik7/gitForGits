@@ -51,7 +51,6 @@ func (a *App) initializeRoutes() {
 	// Global middleware
 	a.Router.Use(middleware.InternalServerErrorHandler)
 	a.Router.Use(middleware.RateLimit)
-	a.Router.Use(middleware.RequestThrottle)
 
 	// Custom 404 error
 	a.Router.NotFoundHandler = http.HandlerFunc(CustomNotFoundHandler)
@@ -86,7 +85,7 @@ func (a *App) initializeRoutes() {
 	adminRouter.Use(middleware.RequireAdminMiddleware(a.Store))
 
 	adminRouter.HandleFunc("/component", compHandler.RenderAdminHandler).Methods("GET")
-	adminRouter.HandleFunc("/component", compHandler.CreateComponentHandler).Methods("POST")
+	adminRouter.HandleFunc("/component", compHandler.CreateComponentFormHandler).Methods("POST")
 
 	// ==========================================
 	// 2.2 DEV INTERFACE (JSON API)
@@ -97,7 +96,7 @@ func (a *App) initializeRoutes() {
 	apiRouter.HandleFunc("/components/{id:[0-9]+}", compHandler.GetComponentByIDHandler).Methods("GET")
 
 	adminApiRouter := apiRouter.PathPrefix("/components").Subrouter()
-	adminApiRouter.Use(middleware.AdminAuthMiddleware)
+	adminApiRouter.Use(middleware.RequireAdminMiddleware(a.Store))
 
 	adminApiRouter.HandleFunc("", compHandler.CreateComponentHandler).Methods("POST")
 	adminApiRouter.HandleFunc("/{id:[0-9]+}", compHandler.UpdateComponentHandler).Methods("PUT")
@@ -185,7 +184,7 @@ func main() {
 	dbPass := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 
-	if dbHost == "" || dbUser == "" || dbPass == "" || dbName == "" {
+	if dbHost == "" || dbPort == "" || dbUser == "" || dbPass == "" || dbName == "" {
 		log.Fatal("Fatal error: System defaults not found in environment variables.")
 	}
 

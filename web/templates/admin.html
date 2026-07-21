@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
-    <title>Регистрация</title>
+    <title>Админ-панель</title>
 </head>
+
 <body>
     <h2>Добавить новый товар (Админка)</h2>
-    <form action="/admin/component" method="POST" style="margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; max-width: 400px;">
+    <form action="/admin/component" method="POST"
+        style="margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; max-width: 400px;">
         <div style="margin-bottom: 10px;">
             <label>Название товара:</label><br>
             <input type="text" name="name" required minlength="3" style="width: 100%;">
@@ -23,6 +26,16 @@
             <label>Цена ($):</label><br>
             <input type="number" name="price" step="0.01" required style="width: 100%;">
         </div>
-        <button type="submit" style="background: green; color: white; padding: 10px 15px; border: none; cursor: pointer;">Добавить на витрину</button>
+        <div style="margin-bottom: 10px;">
+            <label>Рейтинг (0–5):</label><br>
+            <input type="number" name="rating" step="0.1" min="0" max="5" required style="width: 100%;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>Количество на складе:</label><br>
+            <input type="number" name="stock" min="0" required style="width: 100%;">
+        </div>
+        <button type="submit"
+            style="background: green; color: white; padding: 10px 15px; border: none; cursor: pointer;">Добавить на
+            витрину</button>
     </form>
 </body>

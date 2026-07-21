@@ -47,11 +47,24 @@ func (uh *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3)`
-	_, err = uh.DB.Exec(query, name, email, string(hashedPassword))
+	query := `INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id`
+	var userID int
+	err = uh.DB.QueryRow(query, name, email, string(hashedPassword)).Scan(&userID)
 	if err != nil {
 		log.Println("Error registration in Database:", err)
 		http.Error(w, "This email already in use", http.StatusInternalServerError)
+		return
+	}
+
+	session, err := uh.Store.Get(r, sessionName)
+	if err != nil {
+		http.Error(w, "Session error", http.StatusInternalServerError)
+		return
+	}
+	session.Values["user_id"] = userID
+	session.Values["role"] = "customer"
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Error saving session", http.StatusInternalServerError)
 		return
 	}
 
@@ -99,7 +112,11 @@ func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, _ := uh.Store.Get(r, "techstore-session")
+	session, err := uh.Store.Get(r, sessionName)
+	if err != nil {
+		http.Error(w, "Session error", http.StatusInternalServerError)
+		return
+	}
 	session.Values["user_id"] = localUser.id
 	session.Values["role"] = localUser.role
 
@@ -112,13 +129,17 @@ func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (uh *UserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
-	session, _ := uh.Store.Get(r, "techstore-session")
+	session, err := uh.Store.Get(r, sessionName)
+	if err != nil {
+		http.Error(w, "Session error", http.StatusInternalServerError)
+		return
+	}
 
 	delete(session.Values, "user_id")
 
 	session.Options.MaxAge = -1
 
-	err := session.Save(r, w)
+	err = session.Save(r, w)
 	if err != nil {
 		http.Error(w, "Error finishing session", http.StatusInternalServerError)
 		return

@@ -12,6 +12,20 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+const sessionName = "techstore-session"
+
+// parseIDParam extracts and parses the "id" path parameter from the request URL.
+func parseIDParam(r *http.Request) (int, error) {
+	return strconv.Atoi(mux.Vars(r)["id"])
+}
+
+// respondJSON writes a JSON response with the given status code and data.
+func respondJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
 type ComponentHandler struct {
 	DB    *sql.DB
 	Tmpl  *template.Template
@@ -45,7 +59,12 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 		Components: components,
 	}
 
-	session, err := ch.Store.Get(r, "techstore-session")
+	session, err := ch.Store.Get(r, sessionName)
+	if err != nil {
+		http.Error(w, "Error processing session", http.StatusInternalServerError)
+		return
+	}
+
 	if UserID, ok := session.Values["user_id"].(int); ok && UserID != 0 {
 		var localUser models.User
 		err := ch.DB.QueryRow("SELECT name, email FROM users WHERE id = $1", UserID).Scan(&localUser.Username, &localUser.Email)
@@ -60,43 +79,6 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 }
-
-func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	name := r.FormValue("name")
-	manufacturer := r.FormValue("manufacturer")
-	category := r.FormValue("category")
-	priceStr := r.FormValue("price")
-
-	if len(name) < 3 || manufacturer == "" || category == "" || priceStr == "" {
-		http.Error(w, "Missing mandatory fields", http.StatusBadRequest)
-		return
-	}
-
-	price, err := strconv.ParseFloat(priceStr, 64)
-	if err != nil {
-		http.Error(w, "Invalid price format", http.StatusBadRequest)
-		return
-	}
-
-	query := `INSERT INTO components (name, manufacturer, category, price)
-			VALUES ($1, $2, $3, $4)`
-	_, err = ch.DB.Exec(query, name, manufacturer, category, price)
-	if err != nil {
-		http.Error(w, "Error creating component", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-// =========================================================================
-// 2. ИНТЕРФЕЙС РАЗРАБОТЧИКА (JSON API)
-// =========================================================================
 
 func (ch *ComponentHandler) GetComponentsHandler(w http.ResponseWriter, r *http.Request) {
 	rows, err := ch.DB.Query("SELECT id, name, manufacturer, category, price FROM components ORDER BY id")
@@ -115,13 +97,11 @@ func (ch *ComponentHandler) GetComponentsHandler(w http.ResponseWriter, r *http.
 		}
 		components = append(components, comp)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(components)
+	respondJSON(w, http.StatusOK, components)
 }
 
 func (ch *ComponentHandler) GetComponentByIDHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+	id, err := parseIDParam(r)
 	if err != nil {
 		http.Error(w, "Invalid component ID", http.StatusBadRequest)
 		return
@@ -130,7 +110,7 @@ func (ch *ComponentHandler) GetComponentByIDHandler(w http.ResponseWriter, r *ht
 	var comp models.Component
 	query := "SELECT id, name, manufacturer, category, price FROM components WHERE id = $1"
 
-	err = ch.DB.QueryRow(query, id).Scan(&comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price)
+	err = ch.DB.QueryRow(query, id).Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Component not found", http.StatusNotFound)
 		return
@@ -138,8 +118,50 @@ func (ch *ComponentHandler) GetComponentByIDHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(comp)
+	respondJSON(w, http.StatusOK, comp)
+}
+
+func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
+
+	name := r.FormValue("name")
+	manufacturer := r.FormValue("manufacturer")
+	category := r.FormValue("category")
+	priceStr := r.FormValue("price")
+	ratingStr := r.FormValue("rating")
+	stockStr := r.FormValue("stock")
+
+	if len(name) < 3 || manufacturer == "" || category == "" || priceStr == "" || ratingStr == "" || stockStr == "" {
+		http.Error(w, "Missing mandatory fields", http.StatusBadRequest)
+		return
+	}
+
+	price, err := strconv.ParseFloat(priceStr, 64)
+	if err != nil {
+		http.Error(w, "Invalid price format", http.StatusBadRequest)
+		return
+	}
+
+	rating, err := strconv.ParseFloat(ratingStr, 64)
+	if err != nil {
+		http.Error(w, "Invalid rating format", http.StatusBadRequest)
+		return
+	}
+
+	stock, err := strconv.Atoi(stockStr)
+	if err != nil {
+		http.Error(w, "Invalid stock format", http.StatusBadRequest)
+		return
+	}
+
+	query := `INSERT INTO components (name, manufacturer, category, price, rating, stock)
+			VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = ch.DB.Exec(query, name, manufacturer, category, price, rating, stock)
+	if err != nil {
+		http.Error(w, "Error creating component", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (ch *ComponentHandler) CreateComponentHandler(w http.ResponseWriter, r *http.Request) {
@@ -149,23 +171,20 @@ func (ch *ComponentHandler) CreateComponentHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	query := `INSERT INTO components (name, manufacturer, category, price)
-			VALUES ($1, $2, $3, $4) RETURNING id`
+	query := `INSERT INTO components (name, manufacturer, category, price, rating, stock)
+			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 
-	err := ch.DB.QueryRow(query, comp.Name, comp.Manufacturer, comp.Category, comp.Price).Scan(&comp.ID)
+	err := ch.DB.QueryRow(query, comp.Name, comp.Manufacturer, comp.Category, comp.Price, comp.Rating, comp.Stock).Scan(&comp.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(comp)
+	respondJSON(w, http.StatusCreated, comp)
 }
 
 func (ch *ComponentHandler) UpdateComponentHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+	id, err := parseIDParam(r)
 	if err != nil {
 		http.Error(w, "Invalid component ID", http.StatusBadRequest)
 		return
@@ -186,20 +205,19 @@ func (ch *ComponentHandler) UpdateComponentHandler(w http.ResponseWriter, r *htt
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		http.Error(w, "Component not found", http.StatusInternalServerError)
+		http.Error(w, "Component not found", http.StatusNotFound)
 		return
 	}
 
 	comp.ID = id
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(comp)
+	respondJSON(w, http.StatusOK, comp)
 }
 
 func (ch *ComponentHandler) DeleteComponentHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id, err := strconv.Atoi(params["id"])
+	id, err := parseIDParam(r)
 	if err != nil {
 		http.Error(w, "Invalid component ID", http.StatusBadRequest)
+		return
 	}
 
 	query := `DELETE FROM components WHERE id = $1`
@@ -211,7 +229,7 @@ func (ch *ComponentHandler) DeleteComponentHandler(w http.ResponseWriter, r *htt
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		http.Error(w, "Component not found", http.StatusInternalServerError)
+		http.Error(w, "Component not found", http.StatusNotFound)
 		return
 	}
 
