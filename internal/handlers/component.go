@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"techstore/pkg/models"
@@ -30,8 +33,7 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 /*
-	generateSKU generates unique SKU for component bases on its category and manufacturer
-
+generateSKU generates unique SKU for component bases on its category and manufacturer
 (first 3 letter each) and adds 4 random bytes.
 */
 func generateSKU(category, manufacturer string) string {
@@ -199,6 +201,11 @@ func (ch *ComponentHandler) GetComponentByIDHandler(w http.ResponseWriter, r *ht
 }
 
 func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r *http.Request) {
+	// 10 mb part form restriction
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Request too large or invalid form", http.StatusBadRequest)
+		return
+	}
 
 	name := r.FormValue("name")
 	manufacturer := r.FormValue("manufacturer")
@@ -206,6 +213,7 @@ func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r 
 	priceStr := r.FormValue("price")
 	stockStr := r.FormValue("stock")
 	specsStr := r.FormValue("specs")
+	description := r.FormValue("description")
 
 	if len(name) < 3 || manufacturer == "" || category == "" || priceStr == "" || stockStr == "" {
 		http.Error(w, "Missing mandatory fields", http.StatusBadRequest)
@@ -229,16 +237,51 @@ func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r 
 	if strings.TrimSpace(specsStr) == "" {
 		specsStr = "{}"
 	}
-
 	if !json.Valid([]byte(specsStr)) {
 		http.Error(w, "Invalid JSON format in specs", http.StatusBadRequest)
 		return
 	}
 
-	query := `INSERT INTO components (sku, name, manufacturer, category, price, stock, specs)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	// --- Обработка изображения ---
+	imagePath := "/static/images/placeholder.png" // значение по умолчанию
 
-	_, err = ch.DB.Exec(query, sku, name, manufacturer, category, price, stock, json.RawMessage(specsStr))
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		// Файл был приложен
+		defer file.Close()
+
+		// Берём расширение из оригинального имени файла (.jpg, .png, .webp и т.д.)
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		allowedExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true}
+		if !allowedExts[ext] {
+			http.Error(w, "Unsupported image format. Use jpg, png, webp or gif", http.StatusBadRequest)
+			return
+		}
+
+		// Имя файла = SKU компонента, чтобы не было коллизий
+		filename := sku + ext
+		dstPath := filepath.Join(".", "static", "images", filename)
+
+		dst, err := os.Create(dstPath)
+		if err != nil {
+			http.Error(w, "Error saving image", http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+
+		// Копируем байты из загруженного файла на диск
+		if _, err = io.Copy(dst, file); err != nil {
+			http.Error(w, "Error writing image", http.StatusInternalServerError)
+			return
+		}
+
+		imagePath = "/static/images/" + filename
+	}
+
+	query := `INSERT INTO components (sku, name, manufacturer, category, price, stock, description, image_path, specs)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+
+	_, err = ch.DB.Exec(query, sku, name, manufacturer, category, price, stock, description, imagePath, json.RawMessage(specsStr))
 	if err != nil {
 		http.Error(w, "Error creating component", http.StatusInternalServerError)
 		return

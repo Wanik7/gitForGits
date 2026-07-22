@@ -9,7 +9,7 @@
 
 <body>
     <h2>Добавить новый товар (Админка)</h2>
-    <form action="/admin/component" method="POST" onsubmit="return prepareSpecs()"
+    <form action="/admin/component" method="POST" enctype="multipart/form-data" onsubmit="return prepareSpecs()"
         style="margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; max-width: 400px;">
         <div style="margin-bottom: 10px;">
             <label>Название товара:</label><br>
@@ -30,6 +30,15 @@
         <div style="margin-bottom: 10px;">
             <label>Количество на складе:</label><br>
             <input type="number" name="stock" min="0" required style="width: 100%;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>Описание товара:</label><br>
+            <textarea name="description" rows="3" style="width: 100%; resize: vertical;"></textarea>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>Изображение товара:</label><br>
+            <input type="file" name="image" accept="image/*" style="width: 100%;">
+            <small style="color: #888;">Оставьте пустым — будет использовано стандартное изображение</small>
         </div>
         <style>
             /* Немного стилей для красоты формы */
