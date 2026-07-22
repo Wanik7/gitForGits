@@ -1,0 +1,125 @@
+{{define "component_detail"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Component.Name}} - TechStore</title>
+</head>
+<body>
+{{template "header" .}}
+<style>
+    .detail-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+    }
+    .detail-image {
+        width: 100%;
+        border-radius: 8px;
+        object-fit: contain;
+        background: #f8f9fa;
+        padding: 20px;
+    }
+    .detail-info h1 {
+        margin-top: 0;
+        color: #333;
+    }
+    .sku-badge {
+        background: #eee;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.9em;
+        color: #555;
+    }
+    .detail-price {
+        font-size: 2em;
+        color: #2c3e50;
+        font-weight: bold;
+        margin: 20px 0;
+    }
+    .specs-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    .specs-table th, .specs-table td {
+        border-bottom: 1px solid #eee;
+        padding: 10px;
+        text-align: left;
+    }
+    .specs-table th {
+        color: #777;
+        font-weight: normal;
+        width: 40%;
+    }
+    .btn-buy {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.1em;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+        transition: background 0.2s;
+    }
+    .btn-buy:hover {
+        background: #218838;
+    }
+</style>
+
+<main class="detail-container">
+    <!-- Левая колонка: Картинка -->
+    <div>
+        <img src="{{.Component.ImagePath}}" alt="{{.Component.Name}}" class="detail-image">
+    </div>
+
+    <!-- Правая колонка: Инфа и кнопка -->
+    <div class="detail-info">
+        <span class="sku-badge">Артикул: {{.Component.SKU}}</span>
+        <h1>{{.Component.Name}}</h1>
+
+        <p style="color: #666;">Производитель: <strong>{{.Component.Manufacturer}}</strong></p>
+
+        <div class="detail-price">${{.Component.Price}}</div>
+
+        {{if gt .Component.Stock 0}}
+        <p style="color: #2ecc71;">В наличии: {{.Component.Stock}} шт.</p>
+        <button class="btn-buy">Добавить в корзину</button>
+        <!-- Форма для корзины будет здесь -->
+        {{else}}
+        <p style="color: #e74c3c; font-weight: bold;">Нет в наличии</p>
+        <button class="btn-buy" style="background: #ccc; cursor: not-allowed;" disabled>Распродано</button>
+        {{end}}
+
+        <h3 style="margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Характеристики</h3>
+        <table class="specs-table">
+            <tbody>
+            <!-- Цикл по нашему JSONB словарю -->
+            {{range $key, $value := .Specs}}
+            <tr>
+                <!-- Выводим ключ и значение -->
+                <th>{{$key}}</th>
+                <td>{{$value}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="2" style="text-align: center; color: #999;">Характеристики не указаны</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</main>
+{{template "footer" .}}
+</body>
+</html>
+{{end}}

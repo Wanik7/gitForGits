@@ -63,7 +63,7 @@
     .stock-status {
         font-size: 0.9em;
         margin-bottom: 15px;
-        flex-grow: 1; /* Прижимает кнопку вниз */
+        flex-grow: 1;
     }
     .btn-details {
         display: block;
@@ -109,8 +109,7 @@
                 {{end}}
             </div>
 
-            <!-- Ссылка на будущую детальную страницу -->
-            <a href="/component/{{.ID}}" class="btn-details">More</a>
+            <a href="/component/{{.SKU}}" class="btn-details">More</a>
         </div>
         {{end}}
     </div>

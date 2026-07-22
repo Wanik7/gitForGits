@@ -1,3 +1,4 @@
+{{ define "admin" }}
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -8,7 +9,7 @@
 
 <body>
     <h2>Добавить новый товар (Админка)</h2>
-    <form action="/admin/component" method="POST"
+    <form action="/admin/component" method="POST" onsubmit="return prepareSpecs()"
         style="margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; max-width: 400px;">
         <div style="margin-bottom: 10px;">
             <label>Название товара:</label><br>
@@ -27,15 +28,103 @@
             <input type="number" name="price" step="0.01" required style="width: 100%;">
         </div>
         <div style="margin-bottom: 10px;">
-            <label>Рейтинг (0–5):</label><br>
-            <input type="number" name="rating" step="0.1" min="0" max="5" required style="width: 100%;">
-        </div>
-        <div style="margin-bottom: 10px;">
             <label>Количество на складе:</label><br>
             <input type="number" name="stock" min="0" required style="width: 100%;">
         </div>
+        <style>
+            /* Немного стилей для красоты формы */
+            .spec-row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 10px;
+                align-items: center;
+            }
+            .spec-input {
+                flex: 1;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            .btn-remove {
+                background: #ff4757;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .btn-add {
+                background: #2ed573;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+                margin-bottom: 20px;
+            }
+        </style>
+
+        <div style="margin-bottom: 20px; padding: 15px; border: 1px dashed #ccc; border-radius: 8px;">
+            <h3>Характеристики товара</h3>
+
+            <!-- Контейнер, куда будут добавляться новые строки -->
+            <div id="specs-container"></div>
+
+            <!-- Кнопка для добавления новой строки -->
+            <button type="button" class="btn-add" onclick="addSpecRow()">+ Добавить характеристику</button>
+
+            <!-- Скрытое поле, куда наш скрипт положит готовый JSON для Go -->
+            <input type="hidden" name="specs" id="specs-hidden">
+        </div>
+
+        <script>
+            // Функция добавляет новую строку с двумя инпутами
+            function addSpecRow() {
+                const container = document.getElementById('specs-container');
+                const row = document.createElement('div');
+                row.className = 'spec-row';
+
+                row.innerHTML = `
+                    <input type="text" class="spec-key spec-input" placeholder="Название (напр. Сокет)">
+                    <input type="text" class="spec-val spec-input" placeholder="Значение (напр. AM5)">
+                    <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Удалить</button>
+                `;
+                container.appendChild(row);
+            }
+
+            // Добавим одну пустую строку при загрузке страницы для удобства
+            window.onload = function() {
+                addSpecRow();
+            };
+
+            // Собираем specs в JSON и кладём в скрытое поле перед отправкой формы
+            function prepareSpecs() {
+                const keys = document.querySelectorAll('.spec-key');
+                const vals = document.querySelectorAll('.spec-val');
+
+                let specsObj = {};
+
+                for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i].value.trim();
+                    const val = vals[i].value.trim();
+
+                    if (key !== '') {
+                        specsObj[key] = val;
+                    }
+                }
+
+                const jsonString = JSON.stringify(specsObj);
+                document.getElementById('specs-hidden').value = jsonString;
+
+                return true;
+            }
+        </script>
+
         <button type="submit"
             style="background: green; color: white; padding: 10px 15px; border: none; cursor: pointer;">Добавить на
             витрину</button>
     </form>
 </body>
+</html>
+{{ end }}

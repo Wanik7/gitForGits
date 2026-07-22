@@ -4,6 +4,7 @@ import "encoding/json"
 
 type Component struct {
 	ID           int             `json:"id"`
+	SKU          string          `json:"sku"`
 	Name         string          `json:"name"`
 	Manufacturer string          `json:"manufacturer"`
 	Category     string          `json:"category"`

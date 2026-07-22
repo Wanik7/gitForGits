@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
+	"strings"
 	"techstore/pkg/models"
 
 	"github.com/gorilla/mux"
@@ -26,6 +29,32 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	json.NewEncoder(w).Encode(data)
 }
 
+/*
+	generateSKU generates unique SKU for component bases on its category and manufacturer
+
+(first 3 letter each) and adds 4 random bytes.
+*/
+func generateSKU(category, manufacturer string) string {
+	catRunes := []rune(strings.ToUpper(category))
+	manRunes := []rune(strings.ToUpper(manufacturer))
+
+	catPrefix := string(catRunes)
+	if len(catRunes) >= 3 {
+		catPrefix = string(catRunes[:3])
+	}
+
+	manPrefix := string(manRunes)
+	if len(manRunes) >= 3 {
+		manPrefix = string(manRunes[:3])
+	}
+
+	b := make([]byte, 2)
+	rand.Read(b)
+	randStr := fmt.Sprintf("%X", b)
+
+	return fmt.Sprintf("%s-%s-%s", catPrefix, manPrefix, randStr)
+}
+
 type ComponentHandler struct {
 	DB    *sql.DB
 	Tmpl  *template.Template
@@ -38,7 +67,7 @@ type PageData struct {
 }
 
 func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := ch.DB.Query("SELECT id, name, manufacturer, category, price, rating, stock, image_path, specs FROM components ORDER BY id DESC")
+	rows, err := ch.DB.Query("SELECT id, sku, name, manufacturer, category, price, rating, stock, image_path, specs FROM components ORDER BY id DESC")
 	if err != nil {
 		http.Error(w, "Error fetching data", http.StatusInternalServerError)
 		return
@@ -48,7 +77,7 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 	var components []models.Component
 	for rows.Next() {
 		var comp models.Component
-		if err := rows.Scan(&comp.ID, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock, &comp.ImagePath, &comp.Specs); err != nil {
+		if err := rows.Scan(&comp.ID, &comp.SKU, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock, &comp.ImagePath, &comp.Specs); err != nil {
 			http.Error(w, "Error reading data", http.StatusInternalServerError)
 			return
 		}
@@ -74,6 +103,54 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	err = ch.Tmpl.ExecuteTemplate(w, "base", data)
+	if err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (ch *ComponentHandler) RenderComponentDetail(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	sku := vars["sku"]
+
+	var comp models.Component
+	query := `SELECT id, sku, name, manufacturer, category, price, description, rating, stock, image_path, specs 
+	          FROM components WHERE sku = $1`
+	err := ch.DB.QueryRow(query, sku).Scan(&comp.ID, &comp.SKU, &comp.Name, &comp.Manufacturer, &comp.Category,
+		&comp.Price, &comp.Description, &comp.Rating, &comp.Stock, &comp.ImagePath, &comp.Specs,
+	)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Component not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "Error fetching data", http.StatusInternalServerError)
+		return
+	}
+
+	var parsedSpecs map[string]interface{}
+	if len(comp.Specs) > 0 {
+		json.Unmarshal(comp.Specs, &parsedSpecs)
+	}
+
+	data := struct {
+		User      *models.User
+		Component models.Component
+		Specs     map[string]interface{}
+	}{
+		Component: comp,
+		Specs:     parsedSpecs,
+	}
+
+	session, _ := ch.Store.Get(r, sessionName)
+	if userID, ok := session.Values["user_id"].(int); ok && userID != 0 {
+		var localUser models.User
+		err := ch.DB.QueryRow("SELECT name, email FROM users WHERE id = $1", userID).Scan(&localUser.Username, &localUser.Email)
+		if err == nil {
+			data.User = &localUser
+		}
+	}
+
+	err = ch.Tmpl.ExecuteTemplate(w, "component_detail", data)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		return
@@ -127,10 +204,10 @@ func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r 
 	manufacturer := r.FormValue("manufacturer")
 	category := r.FormValue("category")
 	priceStr := r.FormValue("price")
-	ratingStr := r.FormValue("rating")
 	stockStr := r.FormValue("stock")
+	specsStr := r.FormValue("specs")
 
-	if len(name) < 3 || manufacturer == "" || category == "" || priceStr == "" || ratingStr == "" || stockStr == "" {
+	if len(name) < 3 || manufacturer == "" || category == "" || priceStr == "" || stockStr == "" {
 		http.Error(w, "Missing mandatory fields", http.StatusBadRequest)
 		return
 	}
@@ -141,27 +218,33 @@ func (ch *ComponentHandler) CreateComponentFormHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	rating, err := strconv.ParseFloat(ratingStr, 64)
-	if err != nil {
-		http.Error(w, "Invalid rating format", http.StatusBadRequest)
-		return
-	}
-
 	stock, err := strconv.Atoi(stockStr)
 	if err != nil {
 		http.Error(w, "Invalid stock format", http.StatusBadRequest)
 		return
 	}
 
-	query := `INSERT INTO components (name, manufacturer, category, price, rating, stock)
-			VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err = ch.DB.Exec(query, name, manufacturer, category, price, rating, stock)
+	sku := generateSKU(category, manufacturer)
+
+	if strings.TrimSpace(specsStr) == "" {
+		specsStr = "{}"
+	}
+
+	if !json.Valid([]byte(specsStr)) {
+		http.Error(w, "Invalid JSON format in specs", http.StatusBadRequest)
+		return
+	}
+
+	query := `INSERT INTO components (sku, name, manufacturer, category, price, stock, specs)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	_, err = ch.DB.Exec(query, sku, name, manufacturer, category, price, stock, json.RawMessage(specsStr))
 	if err != nil {
 		http.Error(w, "Error creating component", http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/component", http.StatusSeeOther)
 }
 
 func (ch *ComponentHandler) CreateComponentHandler(w http.ResponseWriter, r *http.Request) {
@@ -171,10 +254,16 @@ func (ch *ComponentHandler) CreateComponentHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	query := `INSERT INTO components (name, manufacturer, category, price, rating, stock)
-			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	comp.SKU = generateSKU(comp.Category, comp.Manufacturer)
 
-	err := ch.DB.QueryRow(query, comp.Name, comp.Manufacturer, comp.Category, comp.Price, comp.Rating, comp.Stock).Scan(&comp.ID)
+	if len(comp.Specs) == 0 {
+		comp.Specs = json.RawMessage("{}")
+	}
+
+	query := `INSERT INTO components (sku, name, manufacturer, category, price, rating, stock, image_path, specs)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+
+	err := ch.DB.QueryRow(query, comp.SKU, comp.Name, comp.Manufacturer, comp.Category, comp.Price, comp.Rating, comp.Stock, comp.ImagePath, comp.Specs).Scan(&comp.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -237,7 +326,7 @@ func (ch *ComponentHandler) DeleteComponentHandler(w http.ResponseWriter, r *htt
 }
 
 func (ch *ComponentHandler) RenderAdminHandler(w http.ResponseWriter, r *http.Request) {
-	err := ch.Tmpl.ExecuteTemplate(w, "admin.html", nil)
+	err := ch.Tmpl.ExecuteTemplate(w, "admin", nil)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 	}

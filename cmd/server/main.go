@@ -65,6 +65,8 @@ func (a *App) initializeRoutes() {
 		Store: a.Store,
 	}
 	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
+	a.Router.HandleFunc("/component/{sku}", compHandler.RenderComponentDetail).Methods("GET")
+
 	a.Router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
@@ -118,14 +120,17 @@ func (a *App) createTables() {
 	
 	--- COMPONENTS TABLE ---
 	CREATE TABLE IF NOT EXISTS components (
-		id SERIAL PRIMARY KEY,
-		name VARCHAR(255) NOT NULL,
-		manufacturer VARCHAR(100) NOT NULL,
-		category VARCHAR(50) NOT NULL,
-		price NUMERIC(10, 2) NOT NULL,
-	    description TEXT,
-	    rating NUMERIC(3, 2) NOT NULL CHECK ( rating >= 1 AND rating <= 5 ),
-	    stock INTEGER DEFAULT 0
+    id SERIAL PRIMARY KEY,
+    sku VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    manufacturer VARCHAR(100) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    rating NUMERIC(3, 2) DEFAULT 0.0,
+    stock INT DEFAULT 0,
+	description TEXT,
+    image_path VARCHAR(255) DEFAULT '/static/images/placeholder.png',
+    specs JSONB DEFAULT '{}'::jsonb
 	);
 
 	--- REVIEWS TABLE ---

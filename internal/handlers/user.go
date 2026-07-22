@@ -19,7 +19,7 @@ type UserHandler struct {
 // REGISTRATION
 
 func (uh *UserHandler) RenderRegisterForm(w http.ResponseWriter, r *http.Request) {
-	err := uh.Tmpl.ExecuteTemplate(w, "register.html", nil)
+	err := uh.Tmpl.ExecuteTemplate(w, "register", nil)
 	if err != nil {
 		http.Error(w, "Ошибка рендеринга страницы", http.StatusInternalServerError)
 	}
@@ -74,7 +74,7 @@ func (uh *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 // LOGIN
 
 func (uh *UserHandler) RenderLoginForm(w http.ResponseWriter, r *http.Request) {
-	err := uh.Tmpl.ExecuteTemplate(w, "login.html", nil)
+	err := uh.Tmpl.ExecuteTemplate(w, "login", nil)
 	if err != nil {
 		http.Error(w, "Error rendering page", http.StatusInternalServerError)
 		return
