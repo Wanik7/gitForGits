@@ -134,13 +134,38 @@ func (ch *ComponentHandler) RenderComponentDetail(w http.ResponseWriter, r *http
 		json.Unmarshal(comp.Specs, &parsedSpecs)
 	}
 
+	// Загружаем комментарии через JOIN с users
+	commentRows, err := ch.DB.Query(`
+		SELECT c.id, c.user_id, c.body, c.created, u.name, u.role
+		FROM comments c
+		JOIN users u ON c.user_id = u.id
+		WHERE c.component_id = $1
+		ORDER BY c.created DESC`, comp.ID)
+	if err != nil {
+		http.Error(w, "Error loading comments", http.StatusInternalServerError)
+		return
+	}
+	defer commentRows.Close()
+
+	var comments []models.Comment
+	for commentRows.Next() {
+		var comment models.Comment
+		if err := commentRows.Scan(&comment.ID, &comment.UserID, &comment.Body, &comment.Created, &comment.UserName, &comment.Role); err != nil {
+			http.Error(w, "Error reading comments", http.StatusInternalServerError)
+			return
+		}
+		comments = append(comments, comment)
+	}
+
 	data := struct {
 		User      *models.User
 		Component models.Component
 		Specs     map[string]interface{}
+		Comments  []models.Comment
 	}{
 		Component: comp,
 		Specs:     parsedSpecs,
+		Comments:  comments,
 	}
 
 	session, _ := ch.Store.Get(r, sessionName)

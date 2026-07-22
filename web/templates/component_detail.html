@@ -142,7 +142,142 @@
         <p>{{.Component.Description}}</p>
     </div>
     {{end}}
+
+    <!-- Секция комментариев -->
+    <div class="comments-section" id="comments">
+        <h2>Комментарии</h2>
+
+        {{if .User}}
+        <form class="comment-form" action="/component/{{.Component.SKU}}/comment" method="POST">
+            <textarea name="body" rows="3" placeholder="Напишите комментарий..." required></textarea>
+            <button type="submit" class="btn-comment">Отправить</button>
+        </form>
+        {{else}}
+        <p class="login-hint"><a href="/login">Войдите</a>, чтобы оставить комментарий</p>
+        {{end}}
+
+        <div class="comments-list">
+            {{range .Comments}}
+            <div class="comment">
+                <div class="comment-header">
+                    <span class="comment-author">
+                        {{.UserName}}
+                        {{if eq .Role "admin"}}
+                        <span class="role-badge admin" title="Администратор">✔</span>
+                        {{end}}
+                    </span>
+                    <span class="comment-date">{{.Created.Format "02.01.2006 15:04"}}</span>
+                </div>
+                <p class="comment-body">{{.Body}}</p>
+            </div>
+            {{else}}
+            <p class="no-comments">Комментариев пока нет. Будьте первым!</p>
+            {{end}}
+        </div>
+    </div>
 </main>
+
+<style>
+    .comments-section {
+        grid-column: 1 / -1;
+        border-top: 1px solid #eee;
+        padding-top: 24px;
+    }
+    .comments-section h2 {
+        font-size: 1.1em;
+        color: #555;
+        margin: 0 0 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .comment-form {
+        margin-bottom: 30px;
+    }
+    .comment-form textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 0.95em;
+        resize: vertical;
+        box-sizing: border-box;
+    }
+    .comment-form textarea:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+    .btn-comment {
+        margin-top: 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-comment:hover {
+        background: #0056b3;
+    }
+    .login-hint {
+        color: #888;
+        margin-bottom: 24px;
+    }
+    .login-hint a {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    .comments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .comment {
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .comment-author {
+        font-weight: bold;
+        color: #333;
+    }
+    .role-badge {
+        display: inline-block;
+        font-size: 0.75em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+    .role-badge.admin {
+        background: #28a745;
+        color: white;
+    }
+    .comment-date {
+        font-size: 0.85em;
+        color: #999;
+    }
+    .comment-body {
+        margin: 0;
+        color: #444;
+        line-height: 1.6;
+    }
+    .no-comments {
+        color: #999;
+        text-align: center;
+        padding: 20px 0;
+    }
+</style>
+
 {{template "footer" .}}
 </body>
 </html>

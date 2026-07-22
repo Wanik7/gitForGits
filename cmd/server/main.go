@@ -67,6 +67,9 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
 	a.Router.HandleFunc("/component/{sku}", compHandler.RenderComponentDetail).Methods("GET")
 
+	commentHandler := &handlers.CommentHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
+	a.Router.HandleFunc("/component/{sku}/comment", commentHandler.CreateCommentHandler).Methods("POST")
+
 	a.Router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	userHandler := &handlers.UserHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
