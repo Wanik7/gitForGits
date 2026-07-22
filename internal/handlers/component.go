@@ -69,7 +69,7 @@ type PageData struct {
 }
 
 func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := ch.DB.Query("SELECT id, sku, name, manufacturer, category, price, rating, stock, image_path, specs FROM components ORDER BY id DESC")
+	rows, err := ch.DB.Query("SELECT id, sku, name, manufacturer, category, price, rating, stock, description, image_path, specs FROM components ORDER BY id DESC")
 	if err != nil {
 		http.Error(w, "Error fetching data", http.StatusInternalServerError)
 		return
@@ -79,7 +79,7 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 	var components []models.Component
 	for rows.Next() {
 		var comp models.Component
-		if err := rows.Scan(&comp.ID, &comp.SKU, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock, &comp.ImagePath, &comp.Specs); err != nil {
+		if err := rows.Scan(&comp.ID, &comp.SKU, &comp.Name, &comp.Manufacturer, &comp.Category, &comp.Price, &comp.Rating, &comp.Stock, &comp.Description, &comp.ImagePath, &comp.Specs); err != nil {
 			http.Error(w, "Error reading data", http.StatusInternalServerError)
 			return
 		}

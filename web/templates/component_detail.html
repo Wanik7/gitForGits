@@ -74,6 +74,23 @@
     .btn-buy:hover {
         background: #218838;
     }
+    .detail-description {
+        grid-column: 1 / -1;
+        border-top: 1px solid #eee;
+        padding-top: 24px;
+    }
+    .detail-description h2 {
+        font-size: 1.1em;
+        color: #555;
+        margin: 0 0 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .detail-description p {
+        color: #444;
+        line-height: 1.8;
+        margin: 0;
+    }
 </style>
 
 <main class="detail-container">
@@ -118,6 +135,13 @@
             </tbody>
         </table>
     </div>
+
+    {{if .Component.Description}}
+    <div class="detail-description">
+        <h2>Описание</h2>
+        <p>{{.Component.Description}}</p>
+    </div>
+    {{end}}
 </main>
 {{template "footer" .}}
 </body>
