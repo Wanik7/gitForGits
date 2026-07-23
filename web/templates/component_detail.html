@@ -30,8 +30,13 @@
                 {{if gt .Component.Stock 0}}
                 <p class="text-success" style="font-weight: 500; margin-bottom: 1rem;">В наличии: {{.Component.Stock}}
                     шт.</p>
-                <button class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Добавить в
-                    корзину</button>
+                <form action="/cart/add" method="POST" style="margin-bottom: 1rem;">
+                    <input type="hidden" name="sku" value="{{.Component.SKU}}">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+                        Добавить в корзину
+                    </button>
+                </form>
                 {{else}}
                 <p class="text-danger" style="font-weight: bold; margin-bottom: 1rem;">Нет в наличии</p>
                 <button class="btn btn-outline"

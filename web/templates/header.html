@@ -4,6 +4,13 @@
         <h2 class="brand-logo"><a href="/" style="color: inherit;">TechStore</a></h2>
 
         <nav class="nav-links">
+            <a href="/cart" class="nav-user" style="font-weight: 600; color: var(--primary);">
+                Корзина 
+                {{if gt .CartCount 0}}
+                <span style="background: var(--accent); color: white; border-radius: 50%; padding: 0.1rem 0.4rem; font-size: 0.75rem; margin-left: 0.2rem;">{{.CartCount}}</span>
+                {{end}}
+            </a>
+            
             <!-- Если в структуре PageData есть User -->
             {{if .User}}
             <span class="nav-user">Привет, <strong>{{.User.Username}}</strong>!</span>

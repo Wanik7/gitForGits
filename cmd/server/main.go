@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/gob"
 	"fmt"
 	"html/template"
 	"log"
@@ -15,6 +16,10 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
+
+func init() {
+	gob.Register(map[string]int{})
+}
 
 type App struct {
 	Router        *mux.Router
@@ -64,11 +69,18 @@ func (a *App) initializeRoutes() {
 		Tmpl:  a.TemplateCache,
 		Store: a.Store,
 	}
+
 	a.Router.HandleFunc("/", compHandler.RenderHomeHandler).Methods("GET")
 	a.Router.HandleFunc("/component/{sku}", compHandler.RenderComponentDetail).Methods("GET")
 
 	commentHandler := &handlers.CommentHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
 	a.Router.HandleFunc("/component/{sku}/comment", commentHandler.CreateCommentHandler).Methods("POST")
+
+	cartHandler := &handlers.CartHandler{DB: a.DB, Tmpl: a.TemplateCache, Store: a.Store}
+	a.Router.HandleFunc("/cart", cartHandler.ViewCartHandler).Methods("GET")
+	a.Router.HandleFunc("/cart/add", cartHandler.AddToCartHandler).Methods("POST")
+	a.Router.HandleFunc("/cart/update", cartHandler.UpdateCartHandler).Methods("POST")
+	a.Router.HandleFunc("/cart/checkout", cartHandler.CheckoutHandler).Methods("POST")
 
 	a.Router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 

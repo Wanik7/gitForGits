@@ -91,6 +91,7 @@ a:hover {
     font-weight: 700;
     background: linear-gradient(135deg, var(--primary), var(--accent));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.05em;
 }
@@ -244,10 +245,21 @@ a:hover {
     flex-grow: 1;
 }
 
-.text-success { color: var(--success); }
-.text-warning { color: var(--warning); }
-.text-danger { color: var(--danger); }
-.text-muted { color: var(--text-muted); }
+.text-success {
+    color: var(--success);
+}
+
+.text-warning {
+    color: var(--warning);
+}
+
+.text-danger {
+    color: var(--danger);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
 
 /* Detail Page */
 .detail-grid {
@@ -315,7 +327,8 @@ a:hover {
     margin-top: 1.5rem;
 }
 
-.specs-table th, .specs-table td {
+.specs-table th,
+.specs-table td {
     padding: 1rem 0;
     border-bottom: 1px solid var(--border-color);
     text-align: left;
@@ -380,7 +393,8 @@ a:hover {
     background: var(--success);
 }
 
-.form-input, .form-textarea {
+.form-input,
+.form-textarea {
     width: 100%;
     padding: 0.75rem 1rem;
     border: 1px solid var(--border-color);
@@ -391,7 +405,8 @@ a:hover {
     transition: var(--transition);
 }
 
-.form-input:focus, .form-textarea:focus {
+.form-input:focus,
+.form-textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);

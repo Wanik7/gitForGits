@@ -1,0 +1,101 @@
+{{ define "cart" }}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корзина - TechStore</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    {{template "header" .}}
+    
+    <main class="main-content container">
+        <h1 style="margin-bottom: 2rem; font-size: 2rem; color: var(--text-color);">Ваша корзина</h1>
+
+        {{if .Success}}
+        <div style="padding: 1.5rem; margin-bottom: 2rem; border-radius: var(--radius-md); background: #d1fae5; color: #065f46; border: 1px solid #34d399; text-align: center;">
+            <h2 style="margin-bottom: 0.5rem;">Спасибо за заказ!</h2>
+            <p>Ваш заказ успешно оформлен. Это учебный проект, поэтому оплата не требуется.</p>
+        </div>
+        <div style="text-align: center;">
+            <a href="/" class="btn btn-primary">Вернуться к покупкам</a>
+        </div>
+        {{else}}
+
+            {{if eq (len .Items) 0}}
+            <div style="text-align: center; padding: 4rem 2rem; background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+                <h2 style="color: var(--text-muted); margin-bottom: 1.5rem;">Ваша корзина пуста</h2>
+                <a href="/" class="btn btn-primary">Перейти в каталог</a>
+            </div>
+            {{else}}
+            <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+                
+                <div style="background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: var(--bg-color); border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Товар</th>
+                                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Цена</th>
+                                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Кол-во</th>
+                                <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Итого</th>
+                                <th style="padding: 1rem;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .Items}}
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                                    <img src="{{.Component.ImagePath}}" alt="{{.Component.Name}}" style="width: 50px; height: 50px; object-fit: contain;">
+                                    <div>
+                                        <a href="/component/{{.Component.SKU}}" style="font-weight: 600; color: var(--text-color); text-decoration: none;">{{.Component.Name}}</a>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">{{.Component.SKU}}</div>
+                                    </div>
+                                </td>
+                                <td style="padding: 1rem; font-weight: 500;">${{.Component.Price}}</td>
+                                <td style="padding: 1rem;">
+                                    <form action="/cart/update" method="POST" style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="hidden" name="sku" value="{{.Component.SKU}}">
+                                        <input type="hidden" name="action" value="update">
+                                        <input type="number" name="quantity" value="{{.Quantity}}" min="1" class="form-input" style="width: 70px; padding: 0.25rem 0.5rem;">
+                                        <button type="submit" class="btn btn-outline" style="padding: 0.25rem 0.5rem;">Обновить</button>
+                                    </form>
+                                </td>
+                                <td style="padding: 1rem; font-weight: 600; color: var(--primary);">${{.Subtotal}}</td>
+                                <td style="padding: 1rem;">
+                                    <form action="/cart/update" method="POST">
+                                        <input type="hidden" name="sku" value="{{.Component.SKU}}">
+                                        <input type="hidden" name="action" value="remove">
+                                        <button type="submit" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.2rem;" title="Удалить">✕</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 2rem; align-self: start;">
+                    <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">Сумма заказа</h2>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 1.1rem;">
+                        <span style="color: var(--text-muted);">Товары ({{.CartCount}})</span>
+                        <span style="font-weight: 600;">${{.Total}}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; font-size: 1.25rem; font-weight: 700; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                        <span>Итого</span>
+                        <span style="color: var(--primary);">${{.Total}}</span>
+                    </div>
+                    
+                    <form action="/cart/checkout" method="POST">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Оформить заказ</button>
+                    </form>
+                </div>
+            </div>
+            {{end}}
+        {{end}}
+    </main>
+
+    {{template "footer" .}}
+</body>
+</html>
+{{ end }}

@@ -66,6 +66,7 @@ type ComponentHandler struct {
 type PageData struct {
 	User       *models.User
 	Components []models.Component
+	CartCount  int
 }
 
 func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +89,7 @@ func (ch *ComponentHandler) RenderHomeHandler(w http.ResponseWriter, r *http.Req
 
 	data := PageData{
 		Components: components,
+		CartCount:  GetCartCountHelper(r, ch.Store),
 	}
 
 	session, err := ch.Store.Get(r, sessionName)
@@ -162,10 +164,12 @@ func (ch *ComponentHandler) RenderComponentDetail(w http.ResponseWriter, r *http
 		Component models.Component
 		Specs     map[string]interface{}
 		Comments  []models.Comment
+		CartCount int
 	}{
 		Component: comp,
 		Specs:     parsedSpecs,
 		Comments:  comments,
+		CartCount: GetCartCountHelper(r, ch.Store),
 	}
 
 	session, _ := ch.Store.Get(r, sessionName)
