@@ -3,25 +3,67 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Вход в систему</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему - TechStore</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--auth-bg-gradient);
+        }
+        .auth-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid var(--border-color);
+        }
+        .auth-title {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        .auth-footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 <body>
-<h2>Вход в TechStore</h2>
-
-<form action="/login" method="POST">
-    <div>
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
+    <div class="auth-card">
+        <h2 class="auth-title">Вход в TechStore</h2>
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="email" class="form-label">Email:</label>
+                <input type="email" id="email" name="email" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="password" class="form-label">Пароль:</label>
+                <input type="password" id="password" name="password" class="form-input" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">Войти</button>
+        </form>
+        <div class="auth-footer">
+            <p>Еще нет аккаунта? <a href="/register" style="font-weight: 600;">Создать аккаунт</a></p>
+            <p style="margin-top: 1rem;"><a href="/">&larr; Вернуться в магазин</a></p>
+        </div>
     </div>
-    <div>
-        <label for="password">Пароль:</label>
-        <input type="password" id="password" name="password" required>
-    </div>
-    <button type="submit">Войти</button>
-
-    <hr>
-    <p>Еще нет аккаунта? <a href="/register">Создать аккаунт</a></p>
-</form>
 </body>
 </html>
 {{ end }}

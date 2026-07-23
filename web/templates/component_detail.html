@@ -1,284 +1,112 @@
 {{define "component_detail"}}
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Component.Name}} - TechStore</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
+
 <body>
-{{template "header" .}}
-<style>
-    .detail-container {
-        max-width: 1000px;
-        margin: 40px auto;
-        padding: 20px;
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 40px;
-    }
-    .detail-image {
-        width: 100%;
-        border-radius: 8px;
-        object-fit: contain;
-        background: #f8f9fa;
-        padding: 20px;
-    }
-    .detail-info h1 {
-        margin-top: 0;
-        color: #333;
-    }
-    .sku-badge {
-        background: #eee;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 0.9em;
-        color: #555;
-    }
-    .detail-price {
-        font-size: 2em;
-        color: #2c3e50;
-        font-weight: bold;
-        margin: 20px 0;
-    }
-    .specs-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-    .specs-table th, .specs-table td {
-        border-bottom: 1px solid #eee;
-        padding: 10px;
-        text-align: left;
-    }
-    .specs-table th {
-        color: #777;
-        font-weight: normal;
-        width: 40%;
-    }
-    .btn-buy {
-        background: #28a745;
-        color: white;
-        border: none;
-        padding: 15px 30px;
-        font-size: 1.1em;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        width: 100%;
-        transition: background 0.2s;
-    }
-    .btn-buy:hover {
-        background: #218838;
-    }
-    .detail-description {
-        grid-column: 1 / -1;
-        border-top: 1px solid #eee;
-        padding-top: 24px;
-    }
-    .detail-description h2 {
-        font-size: 1.1em;
-        color: #555;
-        margin: 0 0 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .detail-description p {
-        color: #444;
-        line-height: 1.8;
-        margin: 0;
-    }
-</style>
-
-<main class="detail-container">
-    <!-- Левая колонка: Картинка -->
-    <div>
-        <img src="{{.Component.ImagePath}}" alt="{{.Component.Name}}" class="detail-image">
-    </div>
-
-    <!-- Правая колонка: Инфа и кнопка -->
-    <div class="detail-info">
-        <span class="sku-badge">Артикул: {{.Component.SKU}}</span>
-        <h1>{{.Component.Name}}</h1>
-
-        <p style="color: #666;">Производитель: <strong>{{.Component.Manufacturer}}</strong></p>
-
-        <div class="detail-price">${{.Component.Price}}</div>
-
-        {{if gt .Component.Stock 0}}
-        <p style="color: #2ecc71;">В наличии: {{.Component.Stock}} шт.</p>
-        <button class="btn-buy">Добавить в корзину</button>
-        <!-- Форма для корзины будет здесь -->
-        {{else}}
-        <p style="color: #e74c3c; font-weight: bold;">Нет в наличии</p>
-        <button class="btn-buy" style="background: #ccc; cursor: not-allowed;" disabled>Распродано</button>
-        {{end}}
-
-        <h3 style="margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Характеристики</h3>
-        <table class="specs-table">
-            <tbody>
-            <!-- Цикл по нашему JSONB словарю -->
-            {{range $key, $value := .Specs}}
-            <tr>
-                <!-- Выводим ключ и значение -->
-                <th>{{$key}}</th>
-                <td>{{$value}}</td>
-            </tr>
-            {{else}}
-            <tr>
-                <td colspan="2" style="text-align: center; color: #999;">Характеристики не указаны</td>
-            </tr>
-            {{end}}
-            </tbody>
-        </table>
-    </div>
-
-    {{if .Component.Description}}
-    <div class="detail-description">
-        <h2>Описание</h2>
-        <p>{{.Component.Description}}</p>
-    </div>
-    {{end}}
-
-    <!-- Секция комментариев -->
-    <div class="comments-section" id="comments">
-        <h2>Комментарии</h2>
-
-        {{if .User}}
-        <form class="comment-form" action="/component/{{.Component.SKU}}/comment" method="POST">
-            <textarea name="body" rows="3" placeholder="Напишите комментарий..." required></textarea>
-            <button type="submit" class="btn-comment">Отправить</button>
-        </form>
-        {{else}}
-        <p class="login-hint"><a href="/login">Войдите</a>, чтобы оставить комментарий</p>
-        {{end}}
-
-        <div class="comments-list">
-            {{range .Comments}}
-            <div class="comment">
-                <div class="comment-header">
-                    <span class="comment-author">
-                        {{.UserName}}
-                        {{if eq .Role "admin"}}
-                        <span class="role-badge admin" title="Администратор">✔</span>
-                        {{end}}
-                    </span>
-                    <span class="comment-date">{{.Created.Format "02.01.2006 15:04"}}</span>
-                </div>
-                <p class="comment-body">{{.Body}}</p>
+    {{template "header" .}}
+    <main class="main-content container">
+        <div class="detail-grid">
+            <!-- Левая колонка: Картинка -->
+            <div class="detail-image-wrapper">
+                <img src="{{.Component.ImagePath}}" alt="{{.Component.Name}}" class="product-image">
             </div>
-            {{else}}
-            <p class="no-comments">Комментариев пока нет. Будьте первым!</p>
+
+            <!-- Правая колонка: Инфа и кнопка -->
+            <div class="detail-info">
+                <span class="sku-badge">Артикул: {{.Component.SKU}}</span>
+                <h1 class="detail-title">{{.Component.Name}}</h1>
+
+                <p class="detail-manufacturer">Производитель: <strong>{{.Component.Manufacturer}}</strong></p>
+
+                <div class="product-price">${{.Component.Price}}</div>
+
+                {{if gt .Component.Stock 0}}
+                <p class="text-success" style="font-weight: 500; margin-bottom: 1rem;">В наличии: {{.Component.Stock}}
+                    шт.</p>
+                <button class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Добавить в
+                    корзину</button>
+                {{else}}
+                <p class="text-danger" style="font-weight: bold; margin-bottom: 1rem;">Нет в наличии</p>
+                <button class="btn btn-outline"
+                    style="width: 100%; padding: 1rem; font-size: 1.1rem; cursor: not-allowed; opacity: 0.7;"
+                    disabled>Распродано</button>
+                {{end}}
+
+                <h3 style="margin-top: 2.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                    Характеристики</h3>
+                <table class="specs-table">
+                    <tbody>
+                        {{range $key, $value := .Specs}}
+                        <tr>
+                            <th>{{$key}}</th>
+                            <td>{{$value}}</td>
+                        </tr>
+                        {{else}}
+                        <tr>
+                            <td colspan="2" class="text-muted" style="text-align: center;">Характеристики не указаны
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+
+            {{if .Component.Description}}
+            <div class="detail-description-section">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--text-color);">Описание</h2>
+                <p style="color: var(--text-muted); line-height: 1.7;">{{.Component.Description}}</p>
+            </div>
             {{end}}
+
+            <!-- Секция комментариев -->
+            <div class="comments-section" id="comments">
+                <h2 style="font-size: 1.25rem; margin-bottom: 1.5rem; color: var(--text-color);">Комментарии</h2>
+
+                {{if .User}}
+                <form class="comment-form" action="/component/{{.Component.SKU}}/comment" method="POST"
+                    style="margin-bottom: 2rem;">
+                    <textarea name="body" class="form-textarea" rows="3" placeholder="Напишите комментарий..."
+                        required></textarea>
+                    <div style="margin-top: 0.75rem; text-align: right;">
+                        <button type="submit" class="btn btn-primary">Отправить</button>
+                    </div>
+                </form>
+                {{else}}
+                <p class="text-muted" style="margin-bottom: 2rem;"><a href="/login"
+                        style="font-weight: 600;">Войдите</a>, чтобы оставить комментарий</p>
+                {{end}}
+
+                <div class="comments-list">
+                    {{range .Comments}}
+                    <div class="comment-box">
+                        <div class="comment-header">
+                            <span style="font-weight: 600; color: var(--text-color);">
+                                {{.UserName}}
+                                {{if eq .Role "admin"}}
+                                <span class="role-badge" title="Администратор">✔ Админ</span>
+                                {{end}}
+                            </span>
+                            <span class="text-muted" style="font-size: 0.85rem;">{{.Created.Format "02.01.2006 15:04"}}</span>
+                        </div>
+                        <p style="color: var(--text-muted); line-height: 1.6; margin: 0;">{{.Body}}</p>
+                    </div>
+                    {{else}}
+                    <p class="text-muted" style="text-align: center; padding: 2rem 0;">Комментариев пока нет. Будьте
+                        первым!</p>
+                    {{end}}
+                </div>
+            </div>
         </div>
-    </div>
-</main>
-
-<style>
-    .comments-section {
-        grid-column: 1 / -1;
-        border-top: 1px solid #eee;
-        padding-top: 24px;
-    }
-    .comments-section h2 {
-        font-size: 1.1em;
-        color: #555;
-        margin: 0 0 20px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .comment-form {
-        margin-bottom: 30px;
-    }
-    .comment-form textarea {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-family: inherit;
-        font-size: 0.95em;
-        resize: vertical;
-        box-sizing: border-box;
-    }
-    .comment-form textarea:focus {
-        outline: none;
-        border-color: #007bff;
-    }
-    .btn-comment {
-        margin-top: 10px;
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 10px 24px;
-        border-radius: 6px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    .btn-comment:hover {
-        background: #0056b3;
-    }
-    .login-hint {
-        color: #888;
-        margin-bottom: 24px;
-    }
-    .login-hint a {
-        color: #007bff;
-        text-decoration: none;
-        font-weight: bold;
-    }
-    .comments-list {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-    .comment {
-        padding: 16px;
-        background: #f8f9fa;
-        border-radius: 8px;
-    }
-    .comment-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-    .comment-author {
-        font-weight: bold;
-        color: #333;
-    }
-    .role-badge {
-        display: inline-block;
-        font-size: 0.75em;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-left: 6px;
-        vertical-align: middle;
-    }
-    .role-badge.admin {
-        background: #28a745;
-        color: white;
-    }
-    .comment-date {
-        font-size: 0.85em;
-        color: #999;
-    }
-    .comment-body {
-        margin: 0;
-        color: #444;
-        line-height: 1.6;
-    }
-    .no-comments {
-        color: #999;
-        text-align: center;
-        padding: 20px 0;
-    }
-</style>
-
-{{template "footer" .}}
+    </main>
+    {{template "footer" .}}
 </body>
+
 </html>
 {{end}}

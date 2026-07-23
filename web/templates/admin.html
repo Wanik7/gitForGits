@@ -1,139 +1,104 @@
 {{ define "admin" }}
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
-    <title>Админ-панель</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - TechStore</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-
 <body>
-    <h2>Добавить новый товар (Админка)</h2>
-    <form action="/admin/component" method="POST" enctype="multipart/form-data" onsubmit="return prepareSpecs()"
-        style="margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; max-width: 400px;">
-        <div style="margin-bottom: 10px;">
-            <label>Название товара:</label><br>
-            <input type="text" name="name" required minlength="3" style="width: 100%;">
+    <!-- Мы используем header из base, но тут он не подключен по умолчанию, добавим простую шапку -->
+    <header class="site-header">
+        <div class="container">
+            <h2 class="brand-logo"><a href="/" style="color: inherit;">TechStore Admin</a></h2>
+            <nav class="nav-links">
+                <a href="/" class="btn btn-outline">&larr; В магазин</a>
+            </nav>
         </div>
-        <div style="margin-bottom: 10px;">
-            <label>Производитель:</label><br>
-            <input type="text" name="manufacturer" required style="width: 100%;">
+    </header>
+
+    <main class="main-content container">
+        <div style="max-width: 600px; margin: 0 auto; background: var(--card-bg); padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+            <h2 style="margin-bottom: 2rem; font-size: 1.5rem;">Добавить новый товар</h2>
+            <form action="/admin/component" method="POST" enctype="multipart/form-data" onsubmit="return prepareSpecs()">
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Название товара:</label>
+                    <input type="text" name="name" class="form-input" required minlength="3">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Производитель:</label>
+                    <input type="text" name="manufacturer" class="form-input" required>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Категория:</label>
+                    <input type="text" name="category" class="form-input" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Цена ($):</label>
+                        <input type="number" name="price" class="form-input" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Количество:</label>
+                        <input type="number" name="stock" class="form-input" min="0" required>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Описание товара:</label>
+                    <textarea name="description" class="form-textarea" rows="4"></textarea>
+                </div>
+                <div style="margin-bottom: 2rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Изображение товара:</label>
+                    <input type="file" name="image" class="form-input" accept="image/*" style="padding: 0.5rem;">
+                    <small class="text-muted" style="display: block; margin-top: 0.5rem;">Оставьте пустым — будет использовано стандартное изображение</small>
+                </div>
+
+                <div style="margin-bottom: 2rem; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-color);">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Характеристики товара</h3>
+                    <div id="specs-container"></div>
+                    <button type="button" class="btn btn-outline" style="width: 100%; border-style: dashed;" onclick="addSpecRow()">+ Добавить характеристику</button>
+                    <input type="hidden" name="specs" id="specs-hidden">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Добавить на витрину</button>
+            </form>
         </div>
-        <div style="margin-bottom: 10px;">
-            <label>Категория:</label><br>
-            <input type="text" name="category" required style="width: 100%;">
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label>Цена ($):</label><br>
-            <input type="number" name="price" step="0.01" required style="width: 100%;">
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label>Количество на складе:</label><br>
-            <input type="number" name="stock" min="0" required style="width: 100%;">
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label>Описание товара:</label><br>
-            <textarea name="description" rows="3" style="width: 100%; resize: vertical;"></textarea>
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label>Изображение товара:</label><br>
-            <input type="file" name="image" accept="image/*" style="width: 100%;">
-            <small style="color: #888;">Оставьте пустым — будет использовано стандартное изображение</small>
-        </div>
-        <style>
-            /* Немного стилей для красоты формы */
-            .spec-row {
-                display: flex;
-                gap: 10px;
-                margin-bottom: 10px;
-                align-items: center;
+    </main>
+
+    <script>
+        function addSpecRow() {
+            const container = document.getElementById('specs-container');
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '10px';
+            row.style.marginBottom = '10px';
+
+            row.innerHTML = `
+                <input type="text" class="spec-key form-input" placeholder="Название (напр. Сокет)" style="flex: 1;">
+                <input type="text" class="spec-val form-input" placeholder="Значение (напр. AM5)" style="flex: 1;">
+                <button type="button" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        window.onload = function() {
+            addSpecRow();
+        };
+
+        function prepareSpecs() {
+            const keys = document.querySelectorAll('.spec-key');
+            const vals = document.querySelectorAll('.spec-val');
+            let specsObj = {};
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i].value.trim();
+                const val = vals[i].value.trim();
+                if (key !== '') specsObj[key] = val;
             }
-            .spec-input {
-                flex: 1;
-                padding: 8px;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-            }
-            .btn-remove {
-                background: #ff4757;
-                color: white;
-                border: none;
-                padding: 8px 12px;
-                border-radius: 4px;
-                cursor: pointer;
-            }
-            .btn-add {
-                background: #2ed573;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-weight: bold;
-                margin-bottom: 20px;
-            }
-        </style>
-
-        <div style="margin-bottom: 20px; padding: 15px; border: 1px dashed #ccc; border-radius: 8px;">
-            <h3>Характеристики товара</h3>
-
-            <!-- Контейнер, куда будут добавляться новые строки -->
-            <div id="specs-container"></div>
-
-            <!-- Кнопка для добавления новой строки -->
-            <button type="button" class="btn-add" onclick="addSpecRow()">+ Добавить характеристику</button>
-
-            <!-- Скрытое поле, куда наш скрипт положит готовый JSON для Go -->
-            <input type="hidden" name="specs" id="specs-hidden">
-        </div>
-
-        <script>
-            // Функция добавляет новую строку с двумя инпутами
-            function addSpecRow() {
-                const container = document.getElementById('specs-container');
-                const row = document.createElement('div');
-                row.className = 'spec-row';
-
-                row.innerHTML = `
-                    <input type="text" class="spec-key spec-input" placeholder="Название (напр. Сокет)">
-                    <input type="text" class="spec-val spec-input" placeholder="Значение (напр. AM5)">
-                    <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Удалить</button>
-                `;
-                container.appendChild(row);
-            }
-
-            // Добавим одну пустую строку при загрузке страницы для удобства
-            window.onload = function() {
-                addSpecRow();
-            };
-
-            // Собираем specs в JSON и кладём в скрытое поле перед отправкой формы
-            function prepareSpecs() {
-                const keys = document.querySelectorAll('.spec-key');
-                const vals = document.querySelectorAll('.spec-val');
-
-                let specsObj = {};
-
-                for (let i = 0; i < keys.length; i++) {
-                    const key = keys[i].value.trim();
-                    const val = vals[i].value.trim();
-
-                    if (key !== '') {
-                        specsObj[key] = val;
-                    }
-                }
-
-                const jsonString = JSON.stringify(specsObj);
-                document.getElementById('specs-hidden').value = jsonString;
-
-                return true;
-            }
-        </script>
-
-        <button type="submit"
-            style="background: green; color: white; padding: 10px 15px; border: none; cursor: pointer;">Добавить на
-            витрину</button>
-    </form>
+            document.getElementById('specs-hidden').value = JSON.stringify(specsObj);
+            return true;
+        }
+    </script>
 </body>
 </html>
 {{ end }}

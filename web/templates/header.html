@@ -1,20 +1,19 @@
 {{define "header"}}
-<header>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2><a href="/">TechStore</a></h2>
+<header class="site-header">
+    <div class="container">
+        <h2 class="brand-logo"><a href="/" style="color: inherit;">TechStore</a></h2>
 
-        <nav>
+        <nav class="nav-links">
             <!-- Если в структуре PageData есть User -->
             {{if .User}}
-            <span style="margin-right: 15px;">Привет, <strong>{{.User.Username}}</strong>!</span>
-            <a href="/logout">Выйти</a>
+            <span class="nav-user">Привет, <strong>{{.User.Username}}</strong>!</span>
+            <a href="/logout" class="btn btn-outline">Выйти</a>
             {{else}}
             <!-- Если User равен nil (гость) -->
-            <a href="/login" style="margin-right: 10px;">Войти</a>
-            <a href="/register">Регистрация</a>
+            <a href="/login" class="nav-user" style="font-weight: 500;">Войти</a>
+            <a href="/register" class="btn btn-primary">Регистрация</a>
             {{end}}
         </nav>
     </div>
-    <hr>
 </header>
 {{end}}
