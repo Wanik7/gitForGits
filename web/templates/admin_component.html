@@ -1,4 +1,4 @@
-{{ define "admin" }}
+{{ define "admin_component" }}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -19,6 +19,10 @@
     </header>
 
     <main class="main-content container">
+        <div style="margin-bottom: 2rem; display: flex; gap: 1rem; justify-content: center;">
+            <a href="/admin/component" class="btn btn-primary">Управление товарами</a>
+            <a href="/admin/user" class="btn btn-outline">Управление пользователями</a>
+        </div>
         <div style="max-width: 600px; margin: 0 auto; background: var(--card-bg); padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
             <h2 style="margin-bottom: 2rem; font-size: 1.5rem;">Добавить новый товар</h2>
             <form action="/admin/component" method="POST" enctype="multipart/form-data" onsubmit="return prepareSpecs()">

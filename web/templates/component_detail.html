@@ -91,6 +91,8 @@
                                 {{.UserName}}
                                 {{if eq .Role "admin"}}
                                 <span class="role-badge" title="Администратор">✔ Админ</span>
+                                {{else if eq .Role "moderator"}}
+                                <span class="role-badge role-moderator" title="Модератор">❖ Модер</span>
                                 {{end}}
                             </span>
                             <span class="text-muted" style="font-size: 0.85rem;">{{.Created.Format "02.01.2006 15:04"}}</span>

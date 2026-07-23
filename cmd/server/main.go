@@ -93,6 +93,9 @@ func (a *App) initializeRoutes() {
 	adminRouter.HandleFunc("/component", compHandler.RenderAdminHandler).Methods("GET")
 	adminRouter.HandleFunc("/component", compHandler.CreateComponentFormHandler).Methods("POST")
 
+	adminRouter.HandleFunc("/user", userHandler.RenderAdminUserHandler).Methods("GET")
+	adminRouter.HandleFunc("/user", userHandler.CreateUserByAdminHandler).Methods("POST")
+
 	// ==========================================
 	// 2.2 DEV INTERFACE (JSON API)
 	// ==========================================

@@ -147,3 +147,65 @@ func (uh *UserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+// ADMIN USER MANAGEMENT
+
+func (uh *UserHandler) RenderAdminUserHandler(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{}
+	if errCookie, err := r.Cookie("admin_err"); err == nil && errCookie != nil {
+		data["Error"] = errCookie.Value
+		http.SetCookie(w, &http.Cookie{Name: "admin_err", MaxAge: -1, Path: "/"})
+	}
+
+	err := uh.Tmpl.ExecuteTemplate(w, "admin_user", data)
+	if err != nil {
+		log.Println("Error rendering admin_user:", err)
+		http.Error(w, "Error rendering page", http.StatusInternalServerError)
+	}
+}
+
+func (uh *UserHandler) CreateUserByAdminHandler(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		setFlashCookie(w, "admin_err", "Ошибка чтения формы")
+		http.Redirect(w, r, "/admin/user", http.StatusSeeOther)
+		return
+	}
+
+	name := r.FormValue("name")
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+	role := r.FormValue("role")
+
+	if name == "" || email == "" || password == "" || role == "" {
+		setFlashCookie(w, "admin_err", "Все поля обязательны")
+		http.Redirect(w, r, "/admin/user", http.StatusSeeOther)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		setFlashCookie(w, "admin_err", "Ошибка хеширования пароля")
+		http.Redirect(w, r, "/admin/user", http.StatusSeeOther)
+		return
+	}
+
+	query := `INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)`
+	_, err = uh.DB.Exec(query, name, email, string(hashedPassword), role)
+	if err != nil {
+		log.Println("Error creating user:", err)
+		setFlashCookie(w, "admin_err", "Ошибка сохранения в БД (возможно email занят)")
+		http.Redirect(w, r, "/admin/user", http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/user", http.StatusSeeOther)
+}
+
+func setFlashCookie(w http.ResponseWriter, name, value string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:  name,
+		Value: value,
+		Path:  "/",
+	})
+}

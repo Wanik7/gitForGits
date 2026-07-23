@@ -394,7 +394,7 @@ func (ch *ComponentHandler) DeleteComponentHandler(w http.ResponseWriter, r *htt
 }
 
 func (ch *ComponentHandler) RenderAdminHandler(w http.ResponseWriter, r *http.Request) {
-	err := ch.Tmpl.ExecuteTemplate(w, "admin", nil)
+	err := ch.Tmpl.ExecuteTemplate(w, "admin_component", nil)
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 	}
